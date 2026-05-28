@@ -14,7 +14,7 @@ public class TransactionController {
         this.transactionService = transactionService;
     }
 
-    // create processTransaction endpoints
-    // create some fetch  endpoints (getFlagged, getAllTransaction, getTransactionBy id
-    // create update risk endpoint
+    // TODO: create processTransaction endpoints
+    // TODO: create some fetch  endpoints (getFlagged, getAllTransaction, getTransactionBy id
+    // TODO: create update risk endpoint
 }
