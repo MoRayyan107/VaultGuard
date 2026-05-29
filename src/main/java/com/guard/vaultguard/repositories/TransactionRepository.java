@@ -16,6 +16,4 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByTransactionStatus(TransactionStatus status);
 
     Optional<Transaction> findById(Long id);
-
-    List<Transaction> findByRiskScoreGreaterThan(Double riskScoreIsGreaterThan);
 }

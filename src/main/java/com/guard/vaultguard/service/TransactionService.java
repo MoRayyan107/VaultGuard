@@ -1,6 +1,6 @@
 package com.guard.vaultguard.service;
 
-import com.guard.vaultguard.dto.TransactionDTO;
+import com.guard.vaultguard.dto.transaction.TransactionRequest;
 
 import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
@@ -15,25 +15,28 @@ import java.util.List;
 @Service
 public class TransactionService {
 
+    private static final double RISKSCORE_THRESHOLD = 0.7;
+
     private final TransactionRepository transactionRepository;
 
     public TransactionService(TransactionRepository transactionRepository) {
         this.transactionRepository = transactionRepository;
     }
 
-    public Transaction processTransaction(TransactionDTO trx){
+    public Transaction processTransaction(TransactionRequest trx){
         if (!validTransaction(trx)) throw new IllegalTransactionException("Invalid transaction data");
 
-        Transaction transaction = new Transaction();
-        transaction.setSenderAccountNumber(trx.getSenderAccountNumber());
-        transaction.setRecipientAccountNumber(trx.getRecipientAccountNumber());
-        transaction.setAmount(trx.getAmount());
-        transaction.setTransactionType(trx.getTransactionType());
-        transaction.setSenderLocation(trx.getSenderLocation());
+        Transaction transaction = Transaction.builder()
+                .senderAccountNumber(trx.getSenderAccountNumber())
+                .recipientAccountNumber(trx.getRecipientAccountNumber())
+                .amount(trx.getAmount())
+                .transactionType(trx.getTransactionType())
+                .senderLocation(trx.getSenderLocation())
 
-        // set the default values
-        transaction.setTransactionStatus(TransactionStatus.PENDING);
-        transaction.setTransactionDate(LocalDateTime.now());
+                // default values when making a transaction
+                .transactionStatus(TransactionStatus.PENDING)
+                .transactionDate(LocalDateTime.now())
+                .build();
 
         return transactionRepository.save(transaction);
     }
@@ -51,9 +54,10 @@ public class TransactionService {
                 .orElseThrow(() -> new IllegalTransactionException("Transaction with id " + tsxId + " not found"));
     }
 
-    public List<Transaction> getAllHighRiskTransactions(double riskScoreThreshold){
-        return transactionRepository.findByRiskScoreGreaterThan(riskScoreThreshold);
+    public List<Transaction> getAllHighRiskTransactions(){
+        return transactionRepository.findByRiskScoreGreaterThan(RISKSCORE_THRESHOLD);
     }
+
 
     // ONLY CALLS WHEN COMPLETED TRANSACTION
     public void updateRiskScore(Long tsxId, double score){
@@ -65,7 +69,8 @@ public class TransactionService {
         transactionRepository.save(tsx);
     }
 
-    private boolean validTransaction(TransactionDTO trx){
+
+    private boolean validTransaction(TransactionRequest trx){
         if (trx.getSenderAccountNumber() == null || trx.getSenderAccountNumber().isEmpty()) return false;
 
         if (trx.getTransactionType().toString().isEmpty()) return false;

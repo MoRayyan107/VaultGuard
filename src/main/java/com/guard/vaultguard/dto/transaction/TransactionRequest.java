@@ -1,4 +1,4 @@
-package com.guard.vaultguard.dto;
+package com.guard.vaultguard.dto.transaction;
 
 import com.guard.vaultguard.entities.enums.TransactionType;
 import jakarta.validation.constraints.NotBlank;
@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Setter
 @Getter
-public class TransactionDTO {
+public class TransactionRequest {
 
     @NotBlank
     private String senderAccountNumber;
