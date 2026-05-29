@@ -21,7 +21,6 @@ public class TransactionController {
         this.transactionService = transactionService;
     }
 
-    // TODO: create processTransaction endpoints
     @PostMapping("/processTransaction")
     public ResponseEntity<TransactionResponse> processTransaction(
             @Valid @RequestBody TransactionRequest transactionRequest
@@ -32,8 +31,6 @@ public class TransactionController {
 
         return ResponseEntity.ok(trxResponse);
     }
-
-    // TODO: create some fetch  endpoints (getFlagged, getAllTransaction, getTransactionBy id
 
     @GetMapping("/fetch/flaggedTransactions")
     public ResponseEntity<List<TransactionResponse>> getFlaggedTransactions(){
