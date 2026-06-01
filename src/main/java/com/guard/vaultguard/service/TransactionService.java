@@ -6,11 +6,15 @@ import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
 import com.guard.vaultguard.exceptions.IllegalTransactionException;
+import com.guard.vaultguard.kafka.TransactionProducer;
 import com.guard.vaultguard.repositories.TransactionRepository;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class TransactionService {
@@ -18,9 +22,16 @@ public class TransactionService {
     private static final double RISKSCORE_THRESHOLD = 0.7;
 
     private final TransactionRepository transactionRepository;
+    private final RedisTemplate<Object, Object> redisTemplate;
+    private final TransactionProducer transactionProducer;
 
-    public TransactionService(TransactionRepository transactionRepository) {
+    public TransactionService(TransactionRepository transactionRepository,
+                              RedisTemplate<Object, Object> redisTemplate,
+                              TransactionProducer transactionProducer)
+    {
         this.transactionRepository = transactionRepository;
+        this.redisTemplate = redisTemplate;
+        this.transactionProducer = transactionProducer;
     }
 
     public Transaction processTransaction(TransactionRequest trx){
@@ -38,7 +49,11 @@ public class TransactionService {
                 .transactionDate(LocalDateTime.now())
                 .build();
 
-        return transactionRepository.save(transaction);
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        transactionProducer.sendTransaction(transaction);
+
+        return savedTransaction;
     }
 
     public List<Transaction> getFlaggedTransactions(){
@@ -59,6 +74,52 @@ public class TransactionService {
     }
 
 
+    public void calculateRiskScore(Transaction trx){
+        double riskScore = 0.0;
+
+        // check if the ammount is graeter than 50K
+        if (trx.getAmount().doubleValue() >= 50_000) riskScore += 0.1;
+        if (trx.getAmount().doubleValue() >= 100_000) riskScore += 0.2;
+
+        // type of transaction
+        if (trx.getTransactionType() == TransactionType.TRANSFER) riskScore += 0.1;
+
+        // frequency of transactions
+        Integer freqTransaction = (Integer) redisTemplate.opsForValue().get("transaction_rate:"+trx.getSenderAccountNumber());
+
+        if (freqTransaction == null) {
+            freqTransaction = 1;
+            redisTemplate.opsForValue().set("transaction_rate:"+trx.getSenderAccountNumber(), freqTransaction);
+            redisTemplate.expire("transaction_rate:"+trx.getSenderAccountNumber(), 60,  TimeUnit.SECONDS);
+        } else {
+            redisTemplate.opsForValue().increment("transaction_rate:" + trx.getSenderAccountNumber());
+        }
+        if (freqTransaction > 5) riskScore += 0.2;
+
+
+        // location keeps chaning in short period
+        String lastKnownLocation = (String) redisTemplate.opsForValue().get("transaction_location:"+trx.getSenderAccountNumber());
+        Long timeStampLocation = (Long) redisTemplate.opsForValue().get("location_timestamp:"+trx.getSenderAccountNumber());
+
+        if (lastKnownLocation == null || timeStampLocation == null) {
+            redisTemplate.opsForValue().set("transaction_location:"+trx.getSenderAccountNumber(), trx.getSenderLocation());
+
+            redisTemplate.opsForValue().set("location_timestamp:"+trx.getSenderAccountNumber(), getCurrentTimeStamp_Millis());
+        } else {
+            if (!trx.getSenderLocation().equals(lastKnownLocation)){
+
+                Long TimeDiff = (getCurrentTimeStamp_Millis() - timeStampLocation)/1000;
+                if (TimeDiff >= 120 && TimeDiff <= 300) {
+                    riskScore += 0.3;
+                }
+            }
+            redisTemplate.opsForValue().set("transaction_location:"+trx.getSenderAccountNumber(), trx.getSenderLocation());
+            redisTemplate.opsForValue().set("location_timestamp:"+trx.getSenderAccountNumber(), getCurrentTimeStamp_Millis());
+        }
+        updateRiskScore(trx.getId(), riskScore);
+    }
+
+
     // ONLY CALLS WHEN COMPLETED TRANSACTION
     public void updateRiskScore(Long tsxId, double score){
         Transaction tsx = getTransactionById(tsxId);
@@ -67,6 +128,11 @@ public class TransactionService {
         else tsx.setTransactionStatus(TransactionStatus.COMPLETED);
 
         transactionRepository.save(tsx);
+    }
+
+    private Long getCurrentTimeStamp_Millis(){
+        LocalDateTime currentTime = LocalDateTime.now();
+        return currentTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
 
