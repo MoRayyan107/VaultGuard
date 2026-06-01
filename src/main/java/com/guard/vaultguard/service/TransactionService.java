@@ -6,6 +6,7 @@ import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
 import com.guard.vaultguard.exceptions.IllegalTransactionException;
+import com.guard.vaultguard.kafka.TransactionProducer;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -22,10 +23,15 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final RedisTemplate<Object, Object> redisTemplate;
+    private final TransactionProducer transactionProducer;
 
-    public TransactionService(TransactionRepository transactionRepository, RedisTemplate<Object, Object> redisTemplate) {
+    public TransactionService(TransactionRepository transactionRepository,
+                              RedisTemplate<Object, Object> redisTemplate,
+                              TransactionProducer transactionProducer)
+    {
         this.transactionRepository = transactionRepository;
         this.redisTemplate = redisTemplate;
+        this.transactionProducer = transactionProducer;
     }
 
     public Transaction processTransaction(TransactionRequest trx){
@@ -43,7 +49,11 @@ public class TransactionService {
                 .transactionDate(LocalDateTime.now())
                 .build();
 
-        return transactionRepository.save(transaction);
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        transactionProducer.sendTransaction(transaction);
+
+        return savedTransaction;
     }
 
     public List<Transaction> getFlaggedTransactions(){
@@ -68,8 +78,8 @@ public class TransactionService {
         double riskScore = 0.0;
 
         // check if the ammount is graeter than 50K
-        if (trx.getAmount().doubleValue() > 50_000) riskScore += 0.1;
-        if (trx.getAmount().doubleValue() > 100_000) riskScore += 0.2;
+        if (trx.getAmount().doubleValue() >= 50_000) riskScore += 0.1;
+        if (trx.getAmount().doubleValue() >= 100_000) riskScore += 0.2;
 
         // type of transaction
         if (trx.getTransactionType() == TransactionType.TRANSFER) riskScore += 0.1;
