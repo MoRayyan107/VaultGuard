@@ -33,7 +33,7 @@ build/
 .vscode/
 
 # properties
-**/application.yml
+.env
 Notes
 
 # Redis Dump

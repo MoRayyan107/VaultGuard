@@ -7,10 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.config.TopicBuilder;
 
-
-// TODO: add @Value for ${app.kafka.topic} and use it in createTopicTransaction_In() method
-// TODO: update the tes case to actually pass this condition (ad @TestPropertySource)
-
 @SpringBootApplication
 public class VaultGuardApplication {
 

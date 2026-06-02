@@ -74,10 +74,11 @@ public class TransactionService {
     }
 
 
+    // TODO: Concurrency issue needs to be fixed
     public void calculateRiskScore(Transaction trx){
         double riskScore = 0.0;
 
-        // check if the ammount is graeter than 50K
+        // check if the amount is graeter than 50K
         if (trx.getAmount().doubleValue() >= 50_000) riskScore += 0.1;
         if (trx.getAmount().doubleValue() >= 100_000) riskScore += 0.2;
 
