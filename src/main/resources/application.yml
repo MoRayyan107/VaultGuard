@@ -7,21 +7,21 @@ spring:
 
   # Database Config
   datasource:
-    url: jdbc:h2:mem:vaultguard_test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+
+    username: ${DATASOURCE_USERNAME}
+    password: ${DATASOURCE_PASSWORD}
+    url: jdbc:postgresql://${DATASOURCE_HOST}:${DATASOURCE_PORT}/${DATASOURCE_NAME}
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
-    database-platform: org.hibernate.dialect.H2Dialect
+      ddl-auto: update
     show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
 
-  h2:
-    console:
-      path: /h2-console
-      enabled: true
+#  h2:
+#    console:
+#      path: /h2-console
+#      enabled: true
 
   kafka:
     consumer:
@@ -36,13 +36,13 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVER}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_HOST}:${KAFKA_BOOTSTRAP_PORT}
 
   data:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
-      password:
+      password: ${REDIS_PASSWORD}
 
 app:
   kafka:
