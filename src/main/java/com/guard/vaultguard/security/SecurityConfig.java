@@ -16,6 +16,12 @@ public class SecurityConfig {
         // for now simple allow all requests
         // updating this later in future
 
+        // First CORS custom check
+        // Redis Rate limit check
+        // JWT for authentication
+        // Authorise which rol can acces endpoints
+        // then let them hit the endpoint
+
         http.csrf(
                 AbstractHttpConfigurer::disable
         ).authorizeHttpRequests(

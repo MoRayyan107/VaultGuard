@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("api/transaction")
@@ -73,9 +74,8 @@ public class TransactionController {
     }
 
     @GetMapping("/fetch/transactionById/{id}")
-    public ResponseEntity<TransactionResponse> getTransactionById(@PathVariable Long id){
-        Transaction trx = transactionService.getTransactionById(id);
-        TransactionResponse trxRes = buildTransactionResponse(trx);
+    public ResponseEntity<TransactionResponse> getTransactionById(@PathVariable UUID id){
+        TransactionResponse trxRes = buildTransactionResponse(transactionService.getTransactionById(id));
 
         return ResponseEntity.ok(trxRes);
     }

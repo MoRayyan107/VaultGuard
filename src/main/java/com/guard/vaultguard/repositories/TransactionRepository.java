@@ -7,13 +7,14 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
     List<Transaction> findByRiskScoreGreaterThan(double riskScoreIsGreaterThan);
 
     List<Transaction> findByTransactionStatus(TransactionStatus status);
 
-    Optional<Transaction> findById(Long id);
+    Optional<Transaction> findById(UUID id);
 }

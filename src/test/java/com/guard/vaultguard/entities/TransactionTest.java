@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -20,7 +21,7 @@ public class TransactionTest {
     private static final String RECIPIENT_ACCOUNT_NUMBER = "0987654321";
     private static final String SENDER_LOCATION = "New York";
 
-    private static final Long TRANSACTION_ID = 10101L;
+    private static final UUID TRANSACTION_ID = UUID.randomUUID();
     private static final BigDecimal AMOUNT = BigDecimal.valueOf(100.00);
 
     private static final TransactionType DEFAULT_TRANSFER = TransactionType.TRANSFER;
@@ -64,8 +65,10 @@ public class TransactionTest {
 
     @Test
     public void Setters() {
-        transaction.setId(12345L);
-        assertEquals(12345L, transaction.getId());
+        UUID randomTransactionID = UUID.randomUUID();
+
+        transaction.setId(randomTransactionID);
+        assertEquals(randomTransactionID, transaction.getId());
 
         transaction.setSenderAccountNumber("10101010101");
         assertEquals("10101010101", transaction.getSenderAccountNumber());

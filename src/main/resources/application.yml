@@ -1,0 +1,54 @@
+#file: noinspection YAMLSchemaValidation
+spring:
+  config:
+    import: "file:.env[.properties]"
+  application:
+    name: VaultGuard
+
+  # Database Config
+  datasource:
+
+    username: ${DATASOURCE_USERNAME}
+    password: ${DATASOURCE_PASSWORD}
+    url: jdbc:postgresql://${DATASOURCE_HOST}:${DATASOURCE_PORT}/${DATASOURCE_NAME}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+#  h2:
+#    console:
+#      path: /h2-console
+#      enabled: true
+
+  kafka:
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      group-id: ${KAFKA_GROUP_ID}
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "*"
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_HOST}:${KAFKA_BOOTSTRAP_PORT}
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+app:
+  kafka:
+    topic: ${KAFKA_TOPIC}
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration: ${JWT_ACCESS_TOKEN_EXPIRE_MILLISECONDS}
+
+

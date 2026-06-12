@@ -33,11 +33,9 @@ build/
 .vscode/
 
 # properties
-**/application.yml
+.env
 Notes
+**/secrets/
 
 # Redis Dump
 dump.rdb
-
-## for now dOCKER coMPOSE TO BE IGNORED
-docker-compose.yml
