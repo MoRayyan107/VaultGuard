@@ -1,11 +1,15 @@
 package com.guard.vaultguard.entities;
 
-import com.guard.vaultguard.entities.enums.*;
-import jakarta.persistence.*;
-import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
+
+import jakarta.persistence.*;
+
+import com.guard.vaultguard.entities.enums.TransactionStatus;
+import com.guard.vaultguard.entities.enums.TransactionType;
+
+import lombok.*;
 
 
 @Entity(name = "transactions")
@@ -17,8 +21,8 @@ import java.time.LocalDateTime;
 @ToString
 public class Transaction {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(length = 100, nullable = false)
     private String senderAccountNumber;
@@ -45,4 +49,7 @@ public class Transaction {
 
     @Column
     private double riskScore;
+
+    @Column
+    private LocalDateTime resolvedAt;
 }

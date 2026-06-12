@@ -5,6 +5,7 @@ import com.guard.vaultguard.entities.enums.TransactionType;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,8 +17,9 @@ public class TransactionResponse {
     private TransactionType transactionType;
     private Double transactionAmount;
     private LocalDateTime transactionDate;
-    private Long transactionId;
+    private UUID transactionId;
     private String recipientAccountNumber;
     private String senderAccountNumber;
     private double riskScore;
+    private LocalDateTime resolvedAt;
 }

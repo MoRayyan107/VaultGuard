@@ -39,7 +39,9 @@ services:
     environment:
       POSTGRES_DB: ${DATASOURCE_NAME}
       POSTGRES_USER: ${DATASOURCE_USERNAME}
-      POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/dbPassword
+    secrets:
+      - dbPassword
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -52,3 +54,7 @@ volumes:
     kafka-data:
     redis-data:
     postgres-data:
+
+secrets:
+  dbPassword:
+    file: ./src/main/resources/secrets/dbPassword

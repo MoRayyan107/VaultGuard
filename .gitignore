@@ -35,6 +35,7 @@ build/
 # properties
 .env
 Notes
+**/secrets/
 
 # Redis Dump
 dump.rdb
