@@ -23,8 +23,6 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class TransactionService {
 
-    private static final double RISKSCORE_THRESHOLD = 0.7;
-
     private final TransactionRepository transactionRepository;
     private final StringRedisTemplate redisTemplate;
     private final TransactionProducer transactionProducer;
@@ -32,6 +30,7 @@ public class TransactionService {
     private final static Logger log = LoggerFactory.getLogger(TransactionService.class);
     private final static Integer MIN_TIME_DIFF_LOCATION_CHANGE_SECONDS = 120;
     private final static Integer MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS = 300;
+    private final static Double RISKSCORE_THRESHOLD = 0.7;
 
     public TransactionService(TransactionRepository transactionRepository,
                               StringRedisTemplate redisTemplate,
@@ -86,7 +85,7 @@ public class TransactionService {
 
     // TODO: Concurrency issue needs to be fixed
     @Transactional
-    public Double calculateRiskScore(Transaction trx){
+    public double calculateRiskScore(Transaction trx){
         double riskScore = 0.0;
         String accountKey = trx.getSenderAccountNumber();
         String rateKey = redisKey(accountKey, "rate");
@@ -113,7 +112,7 @@ public class TransactionService {
         String timeStampRaw = redisTemplate.opsForValue().get(timestampKey);
         Long timeStampLocation = timeStampRaw == null ? null : Long.parseLong(timeStampRaw);
 
-        if (lastKnownLocation != null || timeStampLocation != null) {
+        if (lastKnownLocation != null && timeStampLocation != null) {
             if (!trx.getSenderLocation().equals(lastKnownLocation)){
 
                 // if the location changes within 2-5 mins (Country based in this version later Ill see on Lat and Long)
@@ -138,14 +137,14 @@ public class TransactionService {
 
     // ONLY CALLS WHEN COMPLETED TRANSACTION
     @Transactional
-    public Double updateRiskScore(UUID tsxId, double score){
+    public double updateRiskScore(UUID tsxId, double score){
         // round the ccore to near value 0.600001 -> 0.6
         score = Math.round(score * 10.0) / 10.0;
 
         Transaction tsx = getTransactionById(tsxId);
         tsx.setRiskScore(score);
 
-        if (score >= 0.7) tsx.setTransactionStatus(TransactionStatus.FLAGGED);
+        if (score >= RISKSCORE_THRESHOLD) tsx.setTransactionStatus(TransactionStatus.FLAGGED);
         else tsx.setTransactionStatus(TransactionStatus.COMPLETED);
 
         // set the transaction as resolved 

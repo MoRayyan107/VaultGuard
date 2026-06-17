@@ -90,6 +90,7 @@ public class TransactionController {
                 .transactionType(trx.getTransactionType())
                 .transactionStatus(trx.getTransactionStatus())
                 .riskScore(trx.getRiskScore())
+                .resolvedAt(trx.getResolvedAt())
                 .build();
     }
 }

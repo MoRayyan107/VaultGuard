@@ -24,4 +24,26 @@ public class GlobalExceptions {
 
         return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
     }
+
+    @ExceptionHandler(value = DuplicateUsernameException.class)
+    public ResponseEntity<Map<String,Object>> handleDuplicateUsernameException(DuplicateUsernameException ex) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("message", ex.getMessage());
+        map.put("Status", HttpStatus.CONFLICT.value());
+        map.put("Issue", "Username Already Exists");
+        map.put("Timestamp", LocalDateTime.now().toString());
+
+        return new ResponseEntity<>(map, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(value = InvalidUserDataException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidUserDataException(InvalidUserDataException ex) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("message", ex.getMessage());
+        map.put("Status", HttpStatus.BAD_REQUEST.value());
+        map.put("Issue", "Invalid User Data");
+        map.put("Timestamp", LocalDateTime.now().toString());
+
+        return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
+    }
 }
