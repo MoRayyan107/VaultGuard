@@ -20,6 +20,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static com.guard.vaultguard.config.Constants.RISKSCORE_THRESHOLD;
+import static com.guard.vaultguard.config.Constants.MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS;
+import static com.guard.vaultguard.config.Constants.MIN_TIME_DIFF_LOCATION_CHANGE_SECONDS;
+
 @Service
 public class TransactionService {
 
@@ -28,9 +32,6 @@ public class TransactionService {
     private final TransactionProducer transactionProducer;
 
     private final static Logger log = LoggerFactory.getLogger(TransactionService.class);
-    private final static Integer MIN_TIME_DIFF_LOCATION_CHANGE_SECONDS = 120;
-    private final static Integer MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS = 300;
-    private final static Double RISKSCORE_THRESHOLD = 0.7;
 
     public TransactionService(TransactionRepository transactionRepository,
                               StringRedisTemplate redisTemplate,
@@ -60,7 +61,7 @@ public class TransactionService {
         Transaction savedTransaction = transactionRepository.save(transaction);
 
         log.info("[INFO] Transaction saved with ID: {}", savedTransaction.getId());
-        transactionProducer.sendTransaction(transaction);
+        transactionProducer.sendTransaction(savedTransaction);
 
         return savedTransaction;
     }
@@ -124,18 +125,15 @@ public class TransactionService {
                     riskScore += 0.3;
                 }
             }
-            redisTemplate.opsForValue().set(locationKey, trx.getSenderLocation());
-            redisTemplate.opsForValue().set(timestampKey, String.valueOf(getCurrentTimeStamp_Millis()));
-
-        } else {
-            redisTemplate.opsForValue().set(locationKey, trx.getSenderLocation());
-            redisTemplate.opsForValue().set(timestampKey, String.valueOf(getCurrentTimeStamp_Millis()));
         }
+
+        redisTemplate.opsForValue().set(locationKey, trx.getSenderLocation());
+        redisTemplate.opsForValue().set(timestampKey, String.valueOf(getCurrentTimeStamp_Millis()));
         return updateRiskScore(trx.getId(), riskScore);
     }
 
 
-    // ONLY CALLS WHEN COMPLETED TRANSACTION
+    // ONLY CALLS WHEN COMPLETED TRANSACTION AUTO SAVES IN DB
     @Transactional
     public double updateRiskScore(UUID tsxId, double score){
         // round the ccore to near value 0.600001 -> 0.6
@@ -150,8 +148,8 @@ public class TransactionService {
         // set the transaction as resolved 
         tsx.setResolvedAt(LocalDateTime.now());
 
-        log.info("[INFO] Savng risk score for Transaction with ID: {}", tsxId);
-        transactionRepository.save(tsx);
+        log.info("[INFO] Saved risk score for Transaction with ID: {}", tsxId);
+
         return tsx.getRiskScore();
     }
 

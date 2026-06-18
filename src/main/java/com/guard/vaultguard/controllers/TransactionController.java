@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/transaction")
+@RequestMapping("api/v1/transaction")
 public class TransactionController {
 
     private final TransactionService transactionService;
@@ -24,10 +24,10 @@ public class TransactionController {
 
     @PostMapping("/processTransaction")
     public ResponseEntity<TransactionResponse> processTransaction(
-            @Valid @RequestBody TransactionRequest transactionRequest
+            @Valid @RequestBody TransactionRequest trxReq
     )
     {
-        Transaction trx = transactionService.processTransaction(transactionRequest);
+        Transaction trx = transactionService.processTransaction(trxReq);
         TransactionResponse trxResponse = buildTransactionResponse(trx);
 
         return ResponseEntity.ok(trxResponse);

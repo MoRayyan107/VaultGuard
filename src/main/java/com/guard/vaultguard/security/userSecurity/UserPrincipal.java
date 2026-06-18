@@ -8,11 +8,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.Collections;
 
-public class UserPrinciple implements UserDetails {
+public class UserPrincipal implements UserDetails {
 
     private final Users user;
 
-    public UserPrinciple(Users user) {
+    public UserPrincipal(Users user) {
         this.user = user;
     }
 
@@ -31,9 +31,8 @@ public class UserPrinciple implements UserDetails {
         return user.getUsername();
     }
 
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
+    public String getRole(){
+        return user.getRole().name();
     }
 
     @Override

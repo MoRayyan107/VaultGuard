@@ -6,8 +6,7 @@ import lombok.*;
 @Getter
 @Setter
 @AllArgsConstructor
-@NoArgsConstructor
-public class UserRegisterRequest {
+public class UserRequest {
 
     @NotBlank
     private String username;

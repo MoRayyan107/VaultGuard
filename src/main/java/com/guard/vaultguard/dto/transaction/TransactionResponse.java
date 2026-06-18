@@ -20,6 +20,6 @@ public class TransactionResponse {
     private UUID transactionId;
     private String recipientAccountNumber;
     private String senderAccountNumber;
-    private double riskScore;
+    private Double riskScore;
     private LocalDateTime resolvedAt;
 }

@@ -23,6 +23,6 @@ public class UserDetailServiceImpl implements UserDetailsService {
                 () -> new UsernameNotFoundException("Username not Found")
         );
 
-        return new UserPrinciple(user);
+        return new UserPrincipal(user);
     }
 }

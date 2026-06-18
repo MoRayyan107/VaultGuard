@@ -1,8 +1,13 @@
 package com.guard.vaultguard.security;
 
+import com.guard.vaultguard.security.userSecurity.UserDetailServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -11,9 +16,18 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import static com.guard.vaultguard.config.Constants.PUBLIC_ENDPOINTS;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+
+    private final UserDetailServiceImpl userDetailService;
+
+    public SecurityConfig(UserDetailServiceImpl userDetailService) {
+        this.userDetailService = userDetailService;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -28,9 +42,10 @@ public class SecurityConfig {
 
         return http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults()) // for now basic
-                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults())
+                .cors(AbstractHttpConfigurer::disable) // for now disable cors, will enable later oncce FE is implemented
+                .authorizeHttpRequests(auth ->
+                        auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                                .anyRequest().authenticated())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .build();
@@ -44,5 +59,19 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    // set UserDetailService and PasswordEncoder for authentication provider
+    @Bean
+    public AuthenticationProvider AuthProvider () {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
+
+    // Authenticatio manager for authentication provider, used in AuthController for login
+    @Bean
+    public AuthenticationManager authManager (AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }
