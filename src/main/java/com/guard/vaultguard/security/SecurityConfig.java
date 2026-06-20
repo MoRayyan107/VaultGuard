@@ -1,32 +1,44 @@
 package com.guard.vaultguard.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.guard.vaultguard.security.jwt.JwtAuthenticationEntryPoint;
+import com.guard.vaultguard.security.jwt.JwtAuthenticationFilter;
+import com.guard.vaultguard.security.userSecurity.UserAccessDenial;
 import com.guard.vaultguard.security.userSecurity.UserDetailServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import static com.guard.vaultguard.config.Constants.PUBLIC_ENDPOINTS;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-
     private final UserDetailServiceImpl userDetailService;
+    private final JwtAuthenticationFilter jwtFilter;
+    private final ObjectMapper mapper;
 
-    public SecurityConfig(UserDetailServiceImpl userDetailService) {
+
+    public SecurityConfig(UserDetailServiceImpl userDetailService, JwtAuthenticationFilter jwtFilter, ObjectMapper mapper) {
         this.userDetailService = userDetailService;
+        this.jwtFilter = jwtFilter;
+        this.mapper = mapper;
     }
 
     @Bean
@@ -48,6 +60,9 @@ public class SecurityConfig {
                                 .anyRequest().authenticated())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint()))  // authentication entry point for 401's
+                .exceptionHandling(ex -> ex.accessDeniedHandler(userAccessDenialHandler()))  // access denied handler for 403's
                 .build();
 
     }
@@ -73,5 +88,16 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authManager (AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    // had issues with 403 and 401 errors, this is the entry point for unauthenticated requests, returns 401 with json response
+    @Bean
+    public AuthenticationEntryPoint jwtEntryPoint() {
+        return new JwtAuthenticationEntryPoint(mapper);
+    }
+
+    @Bean
+    public AccessDeniedHandler userAccessDenialHandler() {
+        return new UserAccessDenial(mapper);
     }
 }
