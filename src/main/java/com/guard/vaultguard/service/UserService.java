@@ -72,7 +72,7 @@ public class UserService{
             UserPrincipal authenticated = (UserPrincipal) auth.getPrincipal();
 
             String username = authenticated.getUsername();
-            String role = authenticated.getRole();
+            String role = "ROLE_"+authenticated.getRole().toUpperCase();
             String token = jwtUtil.generateToken(username, role);
 
             return buildUserResponse(username, role, token);
