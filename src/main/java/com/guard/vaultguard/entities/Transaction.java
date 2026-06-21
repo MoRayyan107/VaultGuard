@@ -48,7 +48,7 @@ public class Transaction {
     private LocalDateTime transactionDate;
 
     @Column
-    private double riskScore;
+    private Double riskScore;
 
     @Column
     private LocalDateTime resolvedAt;

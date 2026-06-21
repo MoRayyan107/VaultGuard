@@ -20,18 +20,18 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static com.guard.vaultguard.config.Constants.RISKSCORE_THRESHOLD;
+import static com.guard.vaultguard.config.Constants.MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS;
+import static com.guard.vaultguard.config.Constants.MIN_TIME_DIFF_LOCATION_CHANGE_SECONDS;
+
 @Service
 public class TransactionService {
-
-    private static final double RISKSCORE_THRESHOLD = 0.7;
 
     private final TransactionRepository transactionRepository;
     private final StringRedisTemplate redisTemplate;
     private final TransactionProducer transactionProducer;
 
     private final static Logger log = LoggerFactory.getLogger(TransactionService.class);
-    private final static Integer MIN_TIME_DIFF_LOCATION_CHANGE_SECONDS = 120;
-    private final static Integer MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS = 300;
 
     public TransactionService(TransactionRepository transactionRepository,
                               StringRedisTemplate redisTemplate,
@@ -61,7 +61,7 @@ public class TransactionService {
         Transaction savedTransaction = transactionRepository.save(transaction);
 
         log.info("[INFO] Transaction saved with ID: {}", savedTransaction.getId());
-        transactionProducer.sendTransaction(transaction);
+        transactionProducer.sendTransaction(savedTransaction);
 
         return savedTransaction;
     }
@@ -86,7 +86,7 @@ public class TransactionService {
 
     // TODO: Concurrency issue needs to be fixed
     @Transactional
-    public Double calculateRiskScore(Transaction trx){
+    public double calculateRiskScore(Transaction trx){
         double riskScore = 0.0;
         String accountKey = trx.getSenderAccountNumber();
         String rateKey = redisKey(accountKey, "rate");
@@ -113,7 +113,7 @@ public class TransactionService {
         String timeStampRaw = redisTemplate.opsForValue().get(timestampKey);
         Long timeStampLocation = timeStampRaw == null ? null : Long.parseLong(timeStampRaw);
 
-        if (lastKnownLocation != null || timeStampLocation != null) {
+        if (lastKnownLocation != null && timeStampLocation != null) {
             if (!trx.getSenderLocation().equals(lastKnownLocation)){
 
                 // if the location changes within 2-5 mins (Country based in this version later Ill see on Lat and Long)
@@ -125,34 +125,31 @@ public class TransactionService {
                     riskScore += 0.3;
                 }
             }
-            redisTemplate.opsForValue().set(locationKey, trx.getSenderLocation());
-            redisTemplate.opsForValue().set(timestampKey, String.valueOf(getCurrentTimeStamp_Millis()));
-
-        } else {
-            redisTemplate.opsForValue().set(locationKey, trx.getSenderLocation());
-            redisTemplate.opsForValue().set(timestampKey, String.valueOf(getCurrentTimeStamp_Millis()));
         }
+
+        redisTemplate.opsForValue().set(locationKey, trx.getSenderLocation());
+        redisTemplate.opsForValue().set(timestampKey, String.valueOf(getCurrentTimeStamp_Millis()));
         return updateRiskScore(trx.getId(), riskScore);
     }
 
 
-    // ONLY CALLS WHEN COMPLETED TRANSACTION
+    // ONLY CALLS WHEN COMPLETED TRANSACTION AUTO SAVES IN DB
     @Transactional
-    public Double updateRiskScore(UUID tsxId, double score){
+    public double updateRiskScore(UUID tsxId, double score){
         // round the ccore to near value 0.600001 -> 0.6
         score = Math.round(score * 10.0) / 10.0;
 
         Transaction tsx = getTransactionById(tsxId);
         tsx.setRiskScore(score);
 
-        if (score >= 0.7) tsx.setTransactionStatus(TransactionStatus.FLAGGED);
+        if (score >= RISKSCORE_THRESHOLD) tsx.setTransactionStatus(TransactionStatus.FLAGGED);
         else tsx.setTransactionStatus(TransactionStatus.COMPLETED);
 
         // set the transaction as resolved 
         tsx.setResolvedAt(LocalDateTime.now());
 
-        log.info("[INFO] Savng risk score for Transaction with ID: {}", tsxId);
-        transactionRepository.save(tsx);
+        log.info("[INFO] Saved risk score for Transaction with ID: {}", tsxId);
+
         return tsx.getRiskScore();
     }
 
