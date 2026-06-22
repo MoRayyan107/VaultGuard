@@ -35,6 +35,8 @@ jobs:
       - name: Build and Test with Maven
         env:
           MAVEN_OPTS: "-Xmx3072m -XX:+UseG1GC"
+          KAFKA_TOPIC: "vaultguard-test-topic"
+
         run:
           mvn clean install
 
