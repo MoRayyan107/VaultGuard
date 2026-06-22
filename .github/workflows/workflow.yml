@@ -5,12 +5,12 @@ on:
     branches:
       - main
       - master
+      - "features/**"
+      - "fixes/**"
   pull_request:
     branches:
       - main
       - master
-      - "features/**"
-      - "fixes/**"
 
 jobs:
   build-and-test:
