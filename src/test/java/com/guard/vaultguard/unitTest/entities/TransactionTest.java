@@ -1,5 +1,6 @@
-package com.guard.vaultguard.entities;
+package com.guard.vaultguard.unitTest.entities;
 
+import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
 import org.junit.jupiter.api.AfterEach;

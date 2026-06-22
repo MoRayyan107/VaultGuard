@@ -5,26 +5,42 @@ on:
     branches:
       - main
       - master
-      - "features/**"
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+      - "features/**"
+      - "fixes/**"
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
-          cache: maven
+          cache: 'maven'
 
-      - name: Build with Maven
-        run: mvn clean install
+      # Sets up Docker correctly for Testcontainers
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Run tests
-        run: mvn test
+      # Limits Java memory so Docker containers have room to breathe
+      - name: Build and Test with Maven
+        env:
+          MAVEN_OPTS: "-Xmx3072m -XX:+UseG1GC"
+        run:
+          mvn clean install
+
+      - name: Upload Test Reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: '**/target/surefire-reports/'

@@ -1,23 +1,19 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
-    driverClassName: org.h2.Driver
-    username: sa
-    password:
+    url: jdbc:postgresql://localhost:8080/vaultguard_test
+    username: testuser
+    password: testpassword
+    hikari:
+      maximum-pool-size: 100
+      idle-timeout: 30000
+      max-lifetime: 60000
+      connection-timeout: 30000
 
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        
-  h2:
-    console:
-      enabled: true
-    
-  kafka:
+
+  Kafka:
     consumer:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
@@ -36,15 +32,23 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: testpassword
 
     
 logging:
+  pattern:
+    # pattern -> [Thread] [Level] - Message
+    console: "%clr([%15.15t]){faint} %clr(%-5p) %clr(---){faint} %m%n"
   level:
-    org:
-      hibernate:
-        SQL: DEBUG
-        type:
-          descriptor:
-            sql:
-              BasicBinder: TRACE
+    # Only show warnings and errors for the following packages
+    root: WARN
+    org.springframework: WARN
+    org.apache.kafka: WARN
+    org.apache.tomcat: WARN
+
+    # Only show warnings and errors for the following packages
+    org.hibernate: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+
+    # Show info logs for the following packages
+    com.github.vaultguard: INFO
