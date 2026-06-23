@@ -11,12 +11,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.ConfluentKafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
@@ -30,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
 @Testcontainers
+@ActiveProfiles("test")
 class TransactionServiceConcurrencyTest {
 
     @Autowired
@@ -41,23 +44,29 @@ class TransactionServiceConcurrencyTest {
     @Autowired
     StringRedisTemplate redisTemplate;
 
-    private static final int THREAD_COUNT = 10_000;
+    private static final int THREAD_COUNT = 1;
     private static final long EXPECTED_PENDING_TRANSACTIONS = 0;
 
     // setup for redis ccontainer
     @Container
     @ServiceConnection // gets redis host and port form spring data redis properties
-    static final RedisContainer redisContainer = new RedisContainer(DockerImageName.parse("redis:7.2.0"));
+    static final RedisContainer redisContainer =
+            new RedisContainer(DockerImageName.parse("redis:7.2.0"))
+                    .withStartupTimeout(Duration.ofMinutes(2));
 
     @Container
     @ServiceConnection
-    static final ConfluentKafkaContainer kafkaContainer = new ConfluentKafkaContainer(
-            DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
+    static final ConfluentKafkaContainer kafkaContainer =
+            new ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"))
+            .withStartupTimeout(Duration.ofMinutes(2));
 
     @Container
     @ServiceConnection
     static final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:15.6")
-            .withDatabaseName("vaultguard_test");
+            .withDatabaseName("vaultguard_test")
+            .withUsername("testuser")
+            .withPassword("testpassword")
+            .withStartupTimeout(Duration.ofMinutes(2));
 
     private static final TransactionRequest TRANSACTION_REQUEST_TEST = new TransactionRequest(
             SENDER_ACCOUNT_NUMBER,

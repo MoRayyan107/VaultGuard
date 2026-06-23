@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:8080/vaultguard_test
+    url: jdbc:postgresql://localhost:5432/vaultguard_test
     username: testuser
     password: testpassword
     hikari:
