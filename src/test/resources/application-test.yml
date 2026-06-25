@@ -54,4 +54,4 @@ logging:
     org.hibernate.type.descriptor.sql: WARN
 
     # Show info logs for the following packages
-    com.github.vaultguard: INFO
+    com.guard.vaultguard: INFO

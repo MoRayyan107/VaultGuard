@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -30,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
 @Testcontainers
-
+@ActiveProfiles("test")
 // TODO: Redis consurenccy is done, Kafka is left
 class TransactionServiceConcurrencyTest {
 
@@ -69,7 +70,6 @@ class TransactionServiceConcurrencyTest {
             TransactionType.TRANSFER
     );
 
-
     @Test
     void isContainerRunning(){
         assertThat(kafkaContainer.isCreated()).isTrue();
@@ -88,7 +88,7 @@ class TransactionServiceConcurrencyTest {
     }
 
     @Test
-    void makeTransaction(){
+    void makeTransaction() throws InterruptedException {
         boolean isCI = "true".equalsIgnoreCase(System.getenv("CI"));
         int threadCount = isCI ? 50 : THREAD_COUNT;
 
@@ -102,7 +102,7 @@ class TransactionServiceConcurrencyTest {
         List<Future<?>> futuresList = new ArrayList<>();
 
         // Execcutor Service to manage threads
-        try (ExecutorService executorService = Executors.newFixedThreadPool(threadCount)) {
+        try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             for (int i = 0; i < threadCount; i++) {
                 Future<?> future = executorService.submit(() -> {
                     try {
@@ -126,7 +126,7 @@ class TransactionServiceConcurrencyTest {
 
         // wait for kafka to process all messages
         await()
-                .atMost(4, TimeUnit.MINUTES)
+                .atMost(30, TimeUnit.SECONDS)
                 .untilAsserted( () -> {
                     // chek if rate is same as the threads
                     String rateKey = "transaction:"+SENDER_ACCOUNT_NUMBER+":rate:";
@@ -142,7 +142,6 @@ class TransactionServiceConcurrencyTest {
                     assertThat(pendingTransactionCount).isEqualTo(EXPECTED_PENDING_TRANSACTIONS);
                     System.out.println("Expected pending transactions: " + EXPECTED_PENDING_TRANSACTIONS + ", Actual pending transactions: " + pendingTransactionCount);
                 });
-
     }
 
 }
