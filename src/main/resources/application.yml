@@ -7,7 +7,6 @@ spring:
 
   # Database Config
   datasource:
-
     username: ${DATASOURCE_USERNAME}
     password: ${DATASOURCE_PASSWORD}
     url: jdbc:postgresql://${DATASOURCE_HOST}:${DATASOURCE_PORT}/${DATASOURCE_NAME}
