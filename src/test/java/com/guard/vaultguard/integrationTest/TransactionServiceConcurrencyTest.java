@@ -8,6 +8,7 @@ import com.guard.vaultguard.service.TransactionService;
 import com.redis.testcontainers.RedisContainer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @SpringBootTest
 @Testcontainers
 @ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 // TODO: Redis consurenccy is done, Kafka is left
 class TransactionServiceConcurrencyTest {
 
@@ -50,16 +52,16 @@ class TransactionServiceConcurrencyTest {
     // setup for redis ccontainer
     @Container
     @ServiceConnection // gets redis host and port form spring data redis properties
-    static final RedisContainer redisContainer = new RedisContainer(DockerImageName.parse("redis:7.2.0"));
+    static RedisContainer redisContainer = new RedisContainer(DockerImageName.parse("redis:7.2.0"));
 
     @Container
     @ServiceConnection
-    static final ConfluentKafkaContainer kafkaContainer = new ConfluentKafkaContainer(
+    static ConfluentKafkaContainer kafkaContainer = new ConfluentKafkaContainer(
             DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
 
     @Container
     @ServiceConnection
-    static final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:15.6")
+    static PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:15.6")
             .withDatabaseName("vaultguard_test");
 
     private static final TransactionRequest TRANSACTION_REQUEST_TEST = new TransactionRequest(
@@ -90,7 +92,7 @@ class TransactionServiceConcurrencyTest {
     @Test
     void makeTransaction() throws InterruptedException {
         boolean isCI = "true".equalsIgnoreCase(System.getenv("CI"));
-        int threadCount = isCI ? 50 : THREAD_COUNT;
+        int threadCount = isCI ? 999 : THREAD_COUNT;
 
         if (!isCI)
             System.out.println("Running in local environment. Using thread count: " + threadCount);
