@@ -42,6 +42,8 @@ public class TransactionService {
         this.transactionProducer = transactionProducer;
     }
 
+
+
     @Transactional
     public Transaction processTransaction(TransactionRequest trx){
         if (!validateTransaction(trx)) throw new IllegalTransactionException("Invalid transaction data");
@@ -83,8 +85,6 @@ public class TransactionService {
         return transactionRepository.findByRiskScoreGreaterThan(RISKSCORE_THRESHOLD);
     }
 
-
-    // TODO: Concurrency issue needs to be fixed
     @Transactional
     public double calculateRiskScore(Transaction trx){
         double riskScore = 0.0;
@@ -177,4 +177,5 @@ public class TransactionService {
 
         return trx.getSenderLocation() != null && !trx.getSenderLocation().isEmpty();
     }
+
 }

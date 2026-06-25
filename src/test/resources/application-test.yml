@@ -1,0 +1,62 @@
+spring:
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      idle-timeout: 30000
+      max-lifetime: 60000
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  kafka:
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      group-id: test-group
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "*"
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    bootstrap-servers: localhost:9092
+
+  data:
+    redis:
+      timeout: 5s
+      connect-timeout: 5s
+      host: localhost
+      port: 6379
+
+app:
+  kafka:
+    topic: test-topic
+  jwt:
+    secret: "theMostSeCCureSecretYoUhAVeEVeRSEENForTestingPurposesOnly12345"
+    expiration: 3600000
+
+logging:
+  pattern:
+    # pattern -> [Thread] [Level] - Message
+    console: "%clr([%15.15t]){faint} %clr(%-5p) %clr(---){faint} %m%n"
+  level:
+    # Only show warnings and errors for the following packages
+    root: WARN
+    org.springframework: WARN
+    org.apache.kafka: WARN
+    org.apache.tomcat: WARN
+
+    # Only show warnings and errors for the following packages
+    org.hibernate: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+
+    # Show info logs for the following packages
+    com.guard.vaultguard: INFO
