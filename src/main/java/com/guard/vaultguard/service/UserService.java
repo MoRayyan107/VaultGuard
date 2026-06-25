@@ -46,6 +46,7 @@ public class UserService{
         Users newUser = Users.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .email(request.getEmail())
                 .role(UserRole.USER) // default role is USER
                 .build();
 
@@ -80,12 +81,6 @@ public class UserService{
             log.warn("[WARN] Authentication failed for user: {}", request.getUsername(), e);
             throw new InvalidUserDataException("Invalid username or password");
         }
-    }
-
-    public Users findByUsername(String username){
-       return userRepository.findByUsername(username).orElseThrow(
-               () -> new UsernameNotFoundException("Username not Found")
-       );
     }
 
     private UserResponse buildUserResponse(String username, String role, String token){

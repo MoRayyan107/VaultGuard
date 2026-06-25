@@ -54,25 +54,34 @@ git clone https://github.com/MoRayyan107/VaultGuard
 cd VaultGuard
 ```
 
-2. **Will set up Docker and all the othe components later**
+2. **Run the Docker compose file:**
+```bash
+docker compose up -d
+```
 
-3. **Launch the application with production configurations:**
+3. **Launch the application with production configurations: (No Data Seeding)**
 ```bash
 mvn spring-boot:run
 ```
-(Currrently using H2, Forgot my postgress credentials :D)
 
-4. **Launch with local profile (Uses H2 in-memory mode instead of Postgres):**
+4. **Launch with dev profile (Data Seeding):**
 ```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=local
+mvn clean spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
-*Note: If you want to access H2-consle just copy this `http://localhost:8080/h2-console`*
 
 ### Transaction Endpoints
 *(Endpoints currently in development)*
 
 | Method | Endpoint | Description | Access |
-|---|---|---|---|
+|:---:|:---|:---|:---|
+| POST | `/api/v1/fraudDetect/processTransaction` | Submit a new transaction for evaluation | Public |
+| POST | `/api/auth/login` | Authenticate and retrieve JWT token | Public |
+| POST | `/api/auth/register` | Register a new user | Public |
+| GET | `/api/v1/fraudDetect/fetch/flaggedTransactions` | Retrieve all flagged transactions | Admin/Analyst |
+| GET | `/api/v1/fraudDetect/fetch/highRiskTransactions` | Retrieve all transactions with a risk score greater than 0.7 | Admin/Analyst |
+| GET | `/api/v1/fraudDetect/fetch/transaction/{transactionId}` | Retrieve a specific transaction by transaction ID | Admin/Analyst |
+| GET | `/api/v1/fraudDetect/fetch/allTransactions` | Retrieve all transactions | Admin/Analyst |
+| GET | `/api/v1/fraudDetect/fetch/transactionById/{id}` | Retrieve a transaction by ID | Admin |
 
 ## Risk Scoring Metrics
 

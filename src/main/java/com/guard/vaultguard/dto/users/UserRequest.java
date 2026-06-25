@@ -6,6 +6,7 @@ import lombok.*;
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
 public class UserRequest {
 
     @NotBlank
@@ -13,4 +14,7 @@ public class UserRequest {
 
     @NotBlank
     private String password;
+
+    @NotBlank
+    private String email;
 }
