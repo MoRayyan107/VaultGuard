@@ -33,11 +33,11 @@ Database Commit (PostgreSQL) + Live Alert (WebSockets)
 ## Tech Stack
 - **Backend Core:** Java 21 / Spring Boot 3.2.5
 - **Security:** Spring Security + Stateless JWT Validation
-- **Data & Caching:** PostgreSQL (Production Ledger), H2 (Local Mocking), Redis (Rate Limiting Counters)
+- **Data & Caching:** PostgreSQL (Production Ledger), Redis (Rate Limiting Counters)
 - **Event Streaming:** Apache Kafka
-- **Real-Time Layer:** Spring WebSocket with STOMP sub-protocol
+- **Real-Time Layer:** Spring WebSocket 
 - **Tooling:** Lombok, Docker & Docker Compose
-- **Deployment:** Azure Container Apps
+- **Deployment:** Azure Container Apps (Planned)
 
 ## Getting Started
 
@@ -70,8 +70,6 @@ mvn clean spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
 ### Transaction Endpoints
-*(Endpoints currently in development)*
-
 | Method | Endpoint | Description | Access |
 |:---:|:---|:---|:---|
 | POST | `/api/v1/fraudDetect/processTransaction` | Submit a new transaction for evaluation | Public |
