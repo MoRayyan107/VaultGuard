@@ -33,6 +33,9 @@ spring:
       timeout: 5s
       connect-timeout: 5s
 
+app:
+  kafka:
+    topic: test-topic
 
 logging:
   pattern:

@@ -27,19 +27,16 @@ jobs:
           java-version: '21'
           cache: 'maven'
 
-      # Sets up Docker correctly for Testcontainers
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      ## Verify Docker stats
-      - name: Verify Docker stats
+      # verify Docker is installed and running
+      - name: Verify Docker Status
         run: docker info
 
-      # Limits Java memory so Docker containers have room to breathe
       - name: Build and Test with Maven
         env:
           CI: true
-        run:
+          # increase the heap size
+          MAVEN_OPTS: "-Xmx2048m -XX:+UseG1GC"
+        run: |
           mvn clean install
 
       - name: Upload Test Reports
