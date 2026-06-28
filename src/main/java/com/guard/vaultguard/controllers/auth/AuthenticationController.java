@@ -2,7 +2,6 @@ package com.guard.vaultguard.controllers.auth;
 
 import com.guard.vaultguard.dto.users.UserRequest;
 import com.guard.vaultguard.dto.users.UserResponse;
-import com.guard.vaultguard.exceptions.InvalidUserDataException;
 import com.guard.vaultguard.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,8 +9,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 @RestController

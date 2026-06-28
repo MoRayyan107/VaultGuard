@@ -4,6 +4,7 @@ import com.guard.vaultguard.dto.users.UserRequest;
 import com.guard.vaultguard.repositories.UserRepository;
 import com.guard.vaultguard.service.UserService;
 import jakarta.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.Profile;
 
 @Configuration
 @Profile("dev") // runs only on dev mode
+@Slf4j
 public class DataSeeder {
 
     // colors for console output
@@ -34,11 +36,12 @@ public class DataSeeder {
     @Bean
     CommandLineRunner initDatabase(UserService authService) {
         return args -> {
-            System.out.println(CYAN + "========================================================" + RESET);
-            System.out.println(CYAN + BOLD + "[VaultGuard] Starting Automated Local User Seeding..." + RESET);
-            System.out.println(CYAN + "========================================================" + RESET);
+            log.info('\n' + CYAN + "========================================================" + RESET + '\n' +
+                    CYAN + BOLD + "[VaultGuard] Starting Automated Local User Seeding..." + RESET + '\n' +
+                    CYAN + "========================================================" + RESET);
 
-            String logPattern = "Role: [%s%-12s%s] Username: '%s%-13s%s' Password: %-10s Status: %s%n";
+            long startTime = System.currentTimeMillis();
+            int totalUsers = 0;
 
             try {
                 UserRequest userJake = new UserRequest();
@@ -46,10 +49,11 @@ public class DataSeeder {
                 userJake.setPassword("ja@123");
                 userJake.setEmail("jake@vaultguard.com");
                 authService.registerUser(userJake);
+                totalUsers++;
 
-                System.out.printf(logPattern, YELLOW, "ROLE_USER", RESET, CYAN, USERNAME_1, RESET, "ja@123", GREEN + BOLD + "SEEDED" + RESET);
+                printSeederLine("ROLE_USER", USERNAME_1, "ja@123", true);
             } catch (Exception e) {
-                System.out.printf(logPattern, YELLOW, "ROLE_USER", RESET, CYAN, USERNAME_1, RESET, "ja@123", RED + "SKIPPED (Exists)" + RESET);
+                printSeederLine("ROLE_USER", USERNAME_1, "ja@123", false);
             }
 
             try {
@@ -58,10 +62,11 @@ public class DataSeeder {
                 analystAlex.setPassword("alex@123");
                 analystAlex.setEmail("alex@vaultguard.com");
                 authService.registerUser(analystAlex);
+                totalUsers++;
 
-                System.out.printf(logPattern, YELLOW, "ROLE_ANALYST", RESET, CYAN, USERNAME_2, RESET, "alex@123", GREEN + BOLD + "SEEDED" + RESET);
+                printSeederLine("ROLE_ANALYST", USERNAME_2, "alex@123", true);
             } catch (Exception e) {
-                System.out.printf(logPattern, YELLOW, "ROLE_ANALYST", RESET, CYAN, USERNAME_2, RESET, "alex@123", RED + "SKIPPED (Exists)" + RESET);
+                printSeederLine("ROLE_ANALYST", USERNAME_2, "alex@123", false);
             }
 
             try {
@@ -70,36 +75,60 @@ public class DataSeeder {
                 managerMitch.setPassword("mitch@123");
                 managerMitch.setEmail("mitch@vaultguard.com");
                 authService.registerUser(managerMitch);
+                totalUsers++;
 
-                System.out.printf(logPattern, YELLOW, "ROLE_MANAGER", RESET, CYAN, USERNAME_3, RESET, "mitch@123", GREEN + BOLD + "SEEDED" + RESET);
+                printSeederLine("ROLE_MANAGER", USERNAME_3, "mitch@123", true);
             } catch (Exception e) {
-                System.out.printf(logPattern, YELLOW, "ROLE_MANAGER", RESET, CYAN, USERNAME_3, RESET, "mitch@123", RED + "SKIPPED (Exists)" + RESET);
+                printSeederLine("ROLE_MANAGER", USERNAME_3, "mitch@123", false);
             }
 
-            System.out.println(CYAN + "========================================================" + RESET);
-            System.out.println(GREEN + BOLD + "[VaultGuard] User Seeding Flow Complete!" + RESET);
-            System.out.println(CYAN + "========================================================" + RESET);
+            long duration = System.currentTimeMillis() - startTime;
+
+            log.info('\n' + CYAN + "========================================================" + RESET + '\n' +
+                    GREEN + BOLD + "[VaultGuard] User Seeding Flow Complete!" + RESET + '\n' +
+                    GREEN + "Users: {}, \ntime taken: {}ms" + RESET + '\n' +
+                    CYAN + "========================================================" + RESET,
+                    totalUsers, duration);
         };
     }
 
     @PreDestroy
     public void tearDownDatabase() {
-        System.out.println("\n" + RED + "========================================================" + RESET);
-        System.out.println(RED + BOLD + "[VaultGuard] Graceful Shutdown Initiated..." + RESET);
-        System.out.println(RED + "Clearing automated local test users from database..." + RESET);
-        System.out.println(RED + "========================================================" + RESET);
-
+        log.info("[INFO] " + RED + "SHUTDOWN INITIATED" + RESET);
         try {
             // Find them by your string constants and purge them cleanly
             userRepository.findByUsername(USERNAME_1).ifPresent(userRepository::delete);
             userRepository.findByUsername(USERNAME_2).ifPresent(userRepository::delete);
             userRepository.findByUsername(USERNAME_3).ifPresent(userRepository::delete);
 
-            System.out.println(GREEN + BOLD + "Local test accounts securely purged from local instance!" + RESET);
         } catch (Exception e) {
-            System.out.println(YELLOW + "Error removing seeded data: " + e.getMessage() + RESET);
+            log.error(YELLOW + "Error removing seeded data: {}" + RESET, e.getMessage());
         }
-
-        System.out.println(RED + "========================================================" + RESET + "\n");
+        log.info("\n" + RED + "========================================================" + RESET + '\n' +
+                RED + BOLD + "[VaultGuard] Graceful Shutdown Initiated..." + RESET + '\n' +
+                RED + "Clearing automated local test users from database..." + RESET + '\n' +
+                RED + "========================================================" + RESET + "\n" +
+                GREEN + BOLD + "Local test accounts securely purged from local instance!" + RESET + '\n' +
+                RED + "========================================================" + RESET + "\n");
     }
+
+
+    private void printSeederLine(String role, String username, String password, boolean isSeeded) {
+        // Standardize widths using pure text padding (ignoring color codes)
+        String paddedRole = String.format("%-14s", role);
+        String paddedUsername = String.format("'%s'", username);
+        paddedUsername = String.format("%-16s", paddedUsername);
+        String paddedPassword = String.format("%-12s", password);
+
+        String status = isSeeded ? GREEN + BOLD + "SEEDED" + RESET : RED + "SKIPPED (Exists)" + RESET;
+
+        // Print cleanly with colors inserted around perfectly pre-spaced values
+        System.out.printf("Role: [%s%s%s] Username: %s%s%s Password: %s Status: %s%n",
+                YELLOW, paddedRole, RESET,
+                CYAN, paddedUsername, RESET,
+                paddedPassword,
+                status
+        );
+    }
+
 }

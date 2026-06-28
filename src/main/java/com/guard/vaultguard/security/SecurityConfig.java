@@ -3,6 +3,7 @@ package com.guard.vaultguard.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guard.vaultguard.security.jwt.JwtAuthenticationEntryPoint;
 import com.guard.vaultguard.security.jwt.JwtAuthenticationFilter;
+import com.guard.vaultguard.security.userSecurity.RateLimiterFilter;
 import com.guard.vaultguard.security.userSecurity.UserAccessDenial;
 import com.guard.vaultguard.security.userSecurity.UserDetailServiceImpl;
 import org.springframework.context.annotation.Bean;
@@ -33,12 +34,17 @@ public class SecurityConfig {
     private final UserDetailServiceImpl userDetailService;
     private final JwtAuthenticationFilter jwtFilter;
     private final ObjectMapper mapper;
+    private final RateLimiterFilter rateLimiterFilter;
 
-
-    public SecurityConfig(UserDetailServiceImpl userDetailService, JwtAuthenticationFilter jwtFilter, ObjectMapper mapper) {
+    public SecurityConfig(UserDetailServiceImpl userDetailService,
+                          JwtAuthenticationFilter jwtFilter,
+                          RateLimiterFilter rateLimiterFilter,
+                          ObjectMapper mapper)
+    {
         this.userDetailService = userDetailService;
         this.jwtFilter = jwtFilter;
         this.mapper = mapper;
+        this.rateLimiterFilter = rateLimiterFilter;
     }
 
     @Bean
@@ -53,14 +59,15 @@ public class SecurityConfig {
         // then let them hit the endpoint
 
         return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(AbstractHttpConfigurer::disable) // for now disable cors, will enable later oncce FE is implemented
+                .csrf(AbstractHttpConfigurer::disable) // jwt handels csrf, so we can disable it
+                .cors(AbstractHttpConfigurer::disable) // for now disable cors, will enable later oncce FE is implemented or any microservices are calling this API
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                                 .anyRequest().authenticated())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimiterFilter, JwtAuthenticationFilter.class) // Add before we cchecck the token
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint()))  // authentication entry point for 401's
                 .exceptionHandling(ex -> ex.accessDeniedHandler(userAccessDenialHandler()))  // access denied handler for 403's
                 .build();
