@@ -10,8 +10,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
+
+// The logic was made by AI
 @Configuration
-@Profile("dev") // runs only on dev mode
+@Profile("dev")
 @Slf4j
 public class DataSeeder {
 
@@ -36,99 +38,98 @@ public class DataSeeder {
     @Bean
     CommandLineRunner initDatabase(UserService authService) {
         return args -> {
-            log.info('\n' + CYAN + "========================================================" + RESET + '\n' +
-                    CYAN + BOLD + "[VaultGuard] Starting Automated Local User Seeding..." + RESET + '\n' +
-                    CYAN + "========================================================" + RESET);
-
             long startTime = System.currentTimeMillis();
             int totalUsers = 0;
+            StringBuilder logBuilder = new StringBuilder();
 
-            try {
-                UserRequest userJake = new UserRequest();
-                userJake.setUsername(USERNAME_1);
-                userJake.setPassword("ja@123");
-                userJake.setEmail("jake@vaultguard.com");
-                authService.registerUser(userJake);
-                totalUsers++;
+            // Build the header for log
+            logBuilder.append('\n' + CYAN + "========================================================" + RESET + '\n')
+                    .append(CYAN + BOLD + "[VaultGuard] Starting Automated Local User Seeding..." + RESET + '\n')
+                    .append(CYAN + "========================================================" + RESET + '\n');
 
-                printSeederLine("ROLE_USER", USERNAME_1, "ja@123", true);
-            } catch (Exception e) {
-                printSeederLine("ROLE_USER", USERNAME_1, "ja@123", false);
-            }
+            // add the users into a array
+            String[][] usersToSeed = {
+                    {"ROLE_USER", USERNAME_1, "ja@123", "jake@vaultguard.com"},
+                    {"ROLE_ANALYST", USERNAME_2, "alex@123", "alex@vaultguard.com"},
+                    {"ROLE_MANAGER", USERNAME_3, "mitch@123", "mitch@vaultguard.com"}
+            };
 
-            try {
-                UserRequest analystAlex = new UserRequest();
-                analystAlex.setUsername(USERNAME_2);
-                analystAlex.setPassword("alex@123");
-                analystAlex.setEmail("alex@vaultguard.com");
-                authService.registerUser(analystAlex);
-                totalUsers++;
+            // register the users
+            for (String[] userData : usersToSeed) {
+                String role = userData[0];
+                String username = userData[1];
+                String password = userData[2];
+                String email = userData[3];
+                boolean isSeeded = false;
 
-                printSeederLine("ROLE_ANALYST", USERNAME_2, "alex@123", true);
-            } catch (Exception e) {
-                printSeederLine("ROLE_ANALYST", USERNAME_2, "alex@123", false);
-            }
+                try {
+                    UserRequest req = new UserRequest();
+                    req.setUsername(username);
+                    req.setPassword(password);
+                    req.setEmail(email);
+                    authService.registerUser(req);
+                    totalUsers++;
+                    isSeeded = true;
+                } catch (Exception ignored) {
+                    // Ignored because we handle the failure visually in the log below
+                }
 
-            try {
-                UserRequest managerMitch = new UserRequest();
-                managerMitch.setUsername(USERNAME_3);
-                managerMitch.setPassword("mitch@123");
-                managerMitch.setEmail("mitch@vaultguard.com");
-                authService.registerUser(managerMitch);
-                totalUsers++;
+                // Formatted Lines with spaces
+                String paddedRole = String.format("%-14s", role);
+                String paddedUsername = String.format("%-16s", "'" + username + "'");
+                String paddedPassword = String.format("%-12s", password);
+                String status = isSeeded ? (GREEN + BOLD + "SEEDED" + RESET) : (RED + "SKIPPED (Exists)" + RESET);
 
-                printSeederLine("ROLE_MANAGER", USERNAME_3, "mitch@123", true);
-            } catch (Exception e) {
-                printSeederLine("ROLE_MANAGER", USERNAME_3, "mitch@123", false);
+                // Append the row to our single log block
+                logBuilder.append(String.format("Role: [%s%s%s] Username: %s%s%s Password: %s Status: %s%n",
+                        YELLOW, paddedRole, RESET,
+                        CYAN, paddedUsername, RESET,
+                        paddedPassword, status));
             }
 
             long duration = System.currentTimeMillis() - startTime;
 
-            log.info('\n' + CYAN + "========================================================" + RESET + '\n' +
-                    GREEN + BOLD + "[VaultGuard] User Seeding Flow Complete!" + RESET + '\n' +
-                    GREEN + "Users: {}, \ntime taken: {}ms" + RESET + '\n' +
-                    CYAN + "========================================================" + RESET,
-                    totalUsers, duration);
+            // 4. Build Footer
+            logBuilder.append(CYAN+"========================================================"+RESET + '\n')
+                    .append(GREEN + BOLD+ "[VaultGuard] User Seeding Flow Complete!" + RESET + '\n')
+                    .append(GREEN + "Total Users : " + totalUsers + '\n')
+                    .append("Time Taken  : " + duration + "ms" + RESET + '\n')
+                    .append(CYAN + "========================================================" + RESET);
+
+            /// after all that put the log
+            log.info("{}", logBuilder.toString());
         };
     }
 
     @PreDestroy
     public void tearDownDatabase() {
-        log.info("[INFO] " + RED + "SHUTDOWN INITIATED" + RESET);
+        StringBuilder logBuilder = new StringBuilder();
+        boolean hasErrors = false;
+
         try {
-            // Find them by your string constants and purge them cleanly
             userRepository.findByUsername(USERNAME_1).ifPresent(userRepository::delete);
             userRepository.findByUsername(USERNAME_2).ifPresent(userRepository::delete);
             userRepository.findByUsername(USERNAME_3).ifPresent(userRepository::delete);
-
         } catch (Exception e) {
-            log.error(YELLOW + "Error removing seeded data: {}" + RESET, e.getMessage());
+            hasErrors = true;
+            logBuilder.append(YELLOW + "Error removing seeded data: " + e.getMessage() + RESET + '\n');
         }
-        log.info("\n" + RED + "========================================================" + RESET + '\n' +
-                RED + BOLD + "[VaultGuard] Graceful Shutdown Initiated..." + RESET + '\n' +
-                RED + "Clearing automated local test users from database..." + RESET + '\n' +
-                RED + "========================================================" + RESET + "\n" +
-                GREEN + BOLD + "Local test accounts securely purged from local instance!" + RESET + '\n' +
-                RED + "========================================================" + RESET + "\n");
+
+        // Build the teardown banner as one string block
+        logBuilder.append('\n' + RED + "========================================================" + RESET + '\n')
+                .append(RED + BOLD + "[VaultGuard] Graceful Shutdown Initiated..." + RESET + '\n')
+                .append(RED + "Clearing automated local test users from database..." + RESET + '\n')
+                .append(RED + "========================================================" + RESET + '\n');
+
+        if (!hasErrors) {
+            logBuilder.append(GREEN + BOLD + "Local test accounts securely purged from local instance!" + RESET + '\n');
+        } else {
+            logBuilder.append(RED + BOLD + "Purge completed with some errors." + RESET + '\n');
+        }
+
+        logBuilder.append(RED + "========================================================" + RESET);
+
+        // Output as ONE single log statement when CTRL+C is hit
+        log.info("{}", logBuilder.toString());
     }
-
-
-    private void printSeederLine(String role, String username, String password, boolean isSeeded) {
-        // Standardize widths using pure text padding (ignoring color codes)
-        String paddedRole = String.format("%-14s", role);
-        String paddedUsername = String.format("'%s'", username);
-        paddedUsername = String.format("%-16s", paddedUsername);
-        String paddedPassword = String.format("%-12s", password);
-
-        String status = isSeeded ? GREEN + BOLD + "SEEDED" + RESET : RED + "SKIPPED (Exists)" + RESET;
-
-        // Print cleanly with colors inserted around perfectly pre-spaced values
-        System.out.printf("Role: [%s%s%s] Username: %s%s%s Password: %s Status: %s%n",
-                YELLOW, paddedRole, RESET,
-                CYAN, paddedUsername, RESET,
-                paddedPassword,
-                status
-        );
-    }
-
 }

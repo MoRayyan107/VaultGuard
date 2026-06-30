@@ -3,7 +3,7 @@ package com.guard.vaultguard.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guard.vaultguard.security.jwt.JwtAuthenticationEntryPoint;
 import com.guard.vaultguard.security.jwt.JwtAuthenticationFilter;
-import com.guard.vaultguard.security.userSecurity.RateLimiterFilter;
+import com.guard.vaultguard.security.rateLimiting.IpRateLimitingFilter;
 import com.guard.vaultguard.security.userSecurity.UserAccessDenial;
 import com.guard.vaultguard.security.userSecurity.UserDetailServiceImpl;
 import org.springframework.context.annotation.Bean;
@@ -34,17 +34,17 @@ public class SecurityConfig {
     private final UserDetailServiceImpl userDetailService;
     private final JwtAuthenticationFilter jwtFilter;
     private final ObjectMapper mapper;
-    private final RateLimiterFilter rateLimiterFilter;
+    private final IpRateLimitingFilter ipRateLimitingFilter;
 
     public SecurityConfig(UserDetailServiceImpl userDetailService,
                           JwtAuthenticationFilter jwtFilter,
-                          RateLimiterFilter rateLimiterFilter,
+                          IpRateLimitingFilter ipRateLimitingFilter,
                           ObjectMapper mapper)
     {
         this.userDetailService = userDetailService;
         this.jwtFilter = jwtFilter;
+        this.ipRateLimitingFilter = ipRateLimitingFilter;
         this.mapper = mapper;
-        this.rateLimiterFilter = rateLimiterFilter;
     }
 
     @Bean
@@ -67,7 +67,7 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(rateLimiterFilter, JwtAuthenticationFilter.class) // Add before we cchecck the token
+                .addFilterBefore(ipRateLimitingFilter, JwtAuthenticationFilter.class) // Add before we cchecck the token
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint()))  // authentication entry point for 401's
                 .exceptionHandling(ex -> ex.accessDeniedHandler(userAccessDenialHandler()))  // access denied handler for 403's
                 .build();

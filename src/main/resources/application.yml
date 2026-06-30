@@ -48,5 +48,15 @@ app:
   jwt:
     secret: ${JWT_SECRET}
     expiration: ${JWT_ACCESS_TOKEN_EXPIRE_MILLISECONDS}
+  rate-limit:
+    ip:
+      capacity: ${IP_RATE_LIMIT_CAPACITY}
+      refill-tokens: ${IP_TOKEN_REFILL_RATE}
+      refill-period: ${IP_REFILL_DURATION_MILLISECONDS}
+    user:
+      capacity: ${USER_RATE_LIMIT_CAPACITY}
+      refill-tokens: ${USER_TOKEN_REFILL_RATE}
+      refill-period: ${USER_REFILL_DURATION_MILLISECONDS}
+
 
 
