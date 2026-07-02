@@ -46,6 +46,10 @@ app:
       capacity: 100
       refill-tokens: 1
       refill-period: 1000
+    user:
+      capacity: 100
+      refill-tokens: 1
+      refill-period: 1000
 
 logging:
   pattern:
