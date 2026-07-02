@@ -1,57 +1,47 @@
 package com.guard.vaultguard.security.rateLimiting;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guard.vaultguard.service.rateLimiting.IpRateLimitingService;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpStatus;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Map;
 
 @Component
 public class IpRateLimitingFilter extends OncePerRequestFilter {
 
     private final IpRateLimitingService ipRateLimitingService;
+    private final Util ipRateLimitingUtil;
 
-    public IpRateLimitingFilter(IpRateLimitingService ipRateLimitingService) {
+    public IpRateLimitingFilter(IpRateLimitingService ipRateLimitingService, Util ipRateLimitingUtil) {
         this.ipRateLimitingService = ipRateLimitingService;
+        this.ipRateLimitingUtil = ipRateLimitingUtil;
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
         // extract clients IP
         String clientIp = getClientIp(request);
 
         // get the token bucket
-        Bucket tokenBucket = ipRateLimitingService.resolveBucket(clientIp);
+        Bucket IpTokenBucket = ipRateLimitingService.resolveBucket(clientIp);
 
-        var probe = tokenBucket.tryConsumeAndReturnRemaining(1);
+        // consume the token form util class
+        var remainingTokens_IP = ipRateLimitingUtil.doConsume(request, response, IpTokenBucket);
 
-        if (!probe.isConsumed()){
-            long waitRefill = probe.getNanosToWaitForRefill();
-            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-            response.setContentType("application/json");
-
-            Map<String, Object> errorResponse = Map.of(
-                    "error", "Rate limit exceeded",
-                    "message", "You have exceeded the allowed number of requests. Please try again later.",
-                    "retryAfterNanos", waitRefill
-            );
-            new ObjectMapper().writeValue(response.getWriter(), errorResponse);
-
+        // the error message is parsed so if no remaining tokens are left the request is rejected and the error message is sent to the client
+        if (remainingTokens_IP == null){
             return;
         }
 
-        response.addHeader("X-Rate-Limit-Remaining", String.valueOf(probe.getRemainingTokens()));
+        response.addHeader("X-IP-Rate-Limit-Remaining", String.valueOf(remainingTokens_IP));
         filterChain.doFilter(request, response);
 
     }

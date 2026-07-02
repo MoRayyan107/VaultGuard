@@ -12,8 +12,7 @@ import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Setter
-@Getter
+@Data
 @Builder
 public class TransactionResponse {
     private TransactionStatus transactionStatus;

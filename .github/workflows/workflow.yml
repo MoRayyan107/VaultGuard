@@ -1,5 +1,9 @@
 name: VaultGuard CI
 
+env:
+  CI: true
+  MAVEN_OPTS: "-Xmx2048m -XX:+UseG1GC"
+
 on:
   push:
     branches:
@@ -30,13 +34,17 @@ jobs:
       - name: Verify Docker Status
         run: docker info
 
-      - name: Build and Test with Maven
-        env:
-          CI: true
-          # increase the heap size
-          MAVEN_OPTS: "-Xmx2048m -XX:+UseG1GC"
+      - name: Build the application
         run: |
-          mvn clean install
+          mvn clean install -DskipTests
+
+      - name: run Integration Test Containers
+        run: |
+          mvn test -Dtest="com.guard.vaultguard.integrationTest.**.*Test"
+
+      - name: Run Unit Tests
+        run: |
+          mvn test -Dtest="com.guard.vaultguard.unitTest.**.*Test"
 
       - name: Upload Test Reports
         if: failure()

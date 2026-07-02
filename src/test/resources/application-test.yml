@@ -21,7 +21,7 @@ spring:
       group-id: test-group
       auto-offset-reset: earliest
       properties:
-        spring.json.trusted.packages: "com.guard.vaultguard.dto.*"
+        spring.json.trusted.packages: "com.guard.vaultguard.entities"
 
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -45,7 +45,7 @@ app:
     ip:
       capacity: 100
       refill-tokens: 1
-      refill-period: 100
+      refill-period: 1000
 
 logging:
   pattern:

@@ -1,16 +1,14 @@
 package com.guard.vaultguard.config;
 
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
-import io.github.bucket4j.distributed.proxy.ClientSideConfig;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import io.github.bucket4j.redis.lettuce.Bucket4jLettuce;
-import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.data.redis.RedisConnectionDetails;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -19,14 +17,11 @@ import java.time.Duration;
 @Configuration
 public class RateLimitConfig {
 
-    @Value("${spring.data.redis.host}")
-    private String redisHost;
-
-    @Value("${spring.data.redis.port}")
-    private int redisPort;
-
     @Bean
-    public RedisClient redisClient() {
+    public RedisClient redisClient(RedisConnectionDetails redisConnectionDetails) {
+        String redisHost = redisConnectionDetails.getStandalone().getHost();
+        int redisPort = redisConnectionDetails.getStandalone().getPort();
+
         return RedisClient.create(
                 RedisURI.builder()
                         .withHost(redisHost)

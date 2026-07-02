@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.guard.vaultguard.security.jwt.JwtAuthenticationEntryPoint;
 import com.guard.vaultguard.security.jwt.JwtAuthenticationFilter;
 import com.guard.vaultguard.security.rateLimiting.IpRateLimitingFilter;
+import com.guard.vaultguard.security.rateLimiting.UserRateLimitingFilter;
 import com.guard.vaultguard.security.userSecurity.UserAccessDenial;
 import com.guard.vaultguard.security.userSecurity.UserDetailServiceImpl;
 import org.springframework.context.annotation.Bean;
@@ -35,28 +36,22 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtFilter;
     private final ObjectMapper mapper;
     private final IpRateLimitingFilter ipRateLimitingFilter;
+    private final UserRateLimitingFilter userRateLimitingFilter;
 
     public SecurityConfig(UserDetailServiceImpl userDetailService,
                           JwtAuthenticationFilter jwtFilter,
                           IpRateLimitingFilter ipRateLimitingFilter,
-                          ObjectMapper mapper)
+                          ObjectMapper mapper, UserRateLimitingFilter userRateLimitingFilter)
     {
-        this.userDetailService = userDetailService;
-        this.jwtFilter = jwtFilter;
-        this.ipRateLimitingFilter = ipRateLimitingFilter;
         this.mapper = mapper;
+        this.jwtFilter = jwtFilter;
+        this.userDetailService = userDetailService;
+        this.ipRateLimitingFilter = ipRateLimitingFilter;
+        this.userRateLimitingFilter = userRateLimitingFilter;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // for now simple allow all requests
-        // updating this later in future
-
-        // First CORS custom check
-        // Redis Rate limit check
-        // JWT for authentication
-        // Authorise which rol can acces endpoints
-        // then let them hit the endpoint
 
         return http
                 .csrf(AbstractHttpConfigurer::disable) // jwt handels csrf, so we can disable it
@@ -68,6 +63,9 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(ipRateLimitingFilter, JwtAuthenticationFilter.class) // Add before we cchecck the token
+
+                .addFilterAfter(userRateLimitingFilter, JwtAuthenticationFilter.class) // Add after we check the token, so we can get the user from the token and rate limit based on user
+
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint()))  // authentication entry point for 401's
                 .exceptionHandling(ex -> ex.accessDeniedHandler(userAccessDenialHandler()))  // access denied handler for 403's
                 .build();
