@@ -42,8 +42,6 @@ public class TransactionService {
         this.transactionProducer = transactionProducer;
     }
 
-
-
     @Transactional
     public Transaction processTransaction(TransactionRequest trx){
         if (!validateTransaction(trx)) throw new IllegalTransactionException("Invalid transaction data");
@@ -106,7 +104,6 @@ public class TransactionService {
             redisTemplate.expire(rateKey, 60, TimeUnit.SECONDS);
         }
         if (freqTransaction != null && freqTransaction > 5) riskScore += 0.2;
-
 
         // location keeps chaning in short period
         String lastKnownLocation = redisTemplate.opsForValue().get(locationKey);

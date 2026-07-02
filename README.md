@@ -33,11 +33,11 @@ Database Commit (PostgreSQL) + Live Alert (WebSockets)
 ## Tech Stack
 - **Backend Core:** Java 21 / Spring Boot 3.2.5
 - **Security:** Spring Security + Stateless JWT Validation
-- **Data & Caching:** PostgreSQL (Production Ledger), H2 (Local Mocking), Redis (Rate Limiting Counters)
+- **Data & Caching:** PostgreSQL (Production Ledger), Redis (Rate Limiting Counters)
 - **Event Streaming:** Apache Kafka
-- **Real-Time Layer:** Spring WebSocket with STOMP sub-protocol
+- **Real-Time Layer:** Spring WebSocket 
 - **Tooling:** Lombok, Docker & Docker Compose
-- **Deployment:** Azure Container Apps
+- **Deployment:** Azure Container Apps (Planned)
 
 ## Getting Started
 
@@ -54,25 +54,92 @@ git clone https://github.com/MoRayyan107/VaultGuard
 cd VaultGuard
 ```
 
-2. **Will set up Docker and all the othe components later**
+2. **Run the Docker compose file:**
+```bash
+docker compose up -d
+```
 
-3. **Launch the application with production configurations:**
+3. **Launch the application with production configurations: (No Data Seeding)**
 ```bash
 mvn spring-boot:run
 ```
-(Currrently using H2, Forgot my postgress credentials :D)
 
-4. **Launch with local profile (Uses H2 in-memory mode instead of Postgres):**
+4. **Launch with dev profile (Data Seeding):**
 ```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=local
+mvn clean spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
-*Note: If you want to access H2-consle just copy this `http://localhost:8080/h2-console`*
 
 ### Transaction Endpoints
-*(Endpoints currently in development)*
-
 | Method | Endpoint | Description | Access |
-|---|---|---|---|
+|:---:|:---|:---|:---|
+| POST | `/api/v1/fraudDetect/processTransaction` | Submit a new transaction for evaluation | Public |
+| POST | `/api/auth/login` | Authenticate and retrieve JWT token | Public |
+| POST | `/api/auth/register` | Register a new user | Public |
+| GET | `/api/v1/fraudDetect/fetch/flaggedTransactions` | Retrieve all flagged transactions | Admin/Analyst |
+| GET | `/api/v1/fraudDetect/fetch/highRiskTransactions` | Retrieve all transactions with a risk score greater than 0.7 | Admin/Analyst |
+| GET | `/api/v1/fraudDetect/fetch/transaction/{transactionId}` | Retrieve a specific transaction by transaction ID | Admin/Analyst |
+| GET | `/api/v1/fraudDetect/fetch/allTransactions` | Retrieve all transactions | Admin/Analyst |
+| GET | `/api/v1/fraudDetect/fetch/transactionById/{id}` | Retrieve a transaction by ID | Admin |
+
+## Testing & Rate Limiting
+
+### Rate Limit Configuration
+The application enforces two-layer rate limiting via Redis + Bucket4j:
+
+1. **IP-Based Rate Limiting** — Protects against brute-force and unauthenticated spam
+2. **User-Based Rate Limiting** — Per-user quotas after authentication
+
+Configure in `.env`:
+```bash
+# IP Rate Limiting
+IP_RATE_LIMIT_CAPACITY= any number you like
+IP_TOKEN_REFILL_RATE= any number you like
+IP_REFILL_DURATION_MILLISECONDS= any number you like
+
+# User Rate Limiting
+USER_RATE_LIMIT_CAPACITY= any number you like
+USER_TOKEN_REFILL_RATE= any number you like
+USER_REFILL_DURATION_MILLISECONDS= any number you like
+```
+
+### Test Scripts
+
+#### 1. **Single User Transaction Test** (`scripts/run-script.sh`)
+Tests fraud detection API with JWT authentication and rate limiting:
+```bash
+./scripts/run-script.sh
+```
+- Logs in as `alex_analyst`
+- Sends 50 transaction requests
+- Displays status, IP remaining tokens, and user remaining tokens
+- Shows rate-limit errors with retry-after times
+
+#### 2. **Auth Spam Test** (`scripts/spam-auth-test.sh`)
+Stress tests rate limiting with concurrent registration and login:
+```bash
+./scripts/spam-auth-test.sh
+```
+- Runs 400 registration requests (unique usernames/emails)
+- Runs 400 login requests (same user)
+- Total: 800 requests across both endpoints
+- Shows success rate, rate-limited responses, and errors
+- Best run with 2+ terminals simultaneously to stress IP-based limiting
+
+**Example: Parallel IP Rate Limiting Test**
+```bash
+# Terminal 1
+./scripts/spam-auth-test.sh
+
+# Terminal 2 (simultaneous)
+./scripts/spam-auth-test.sh
+```
+
+### Interpreting Results
+- **Status 200/201:** Request succeeded
+- **Status 429:** Rate limit exceeded (retry after shown time)
+- **Status 409:** Conflict (e.g., duplicate registration)
+- **IP Remaining:** Tokens left in the IP bucket
+- **User Remaining:** Tokens left in the user bucket
 
 ## Risk Scoring Metrics
 

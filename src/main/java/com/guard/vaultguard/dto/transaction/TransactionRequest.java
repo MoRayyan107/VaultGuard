@@ -9,8 +9,8 @@ import java.math.BigDecimal;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Setter
-@Getter
+@Data
+@Builder
 public class TransactionRequest {
 
     @NotBlank

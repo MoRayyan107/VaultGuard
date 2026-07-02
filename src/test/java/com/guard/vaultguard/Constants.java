@@ -17,5 +17,9 @@ public class Constants {
     public static final BigDecimal AMOUNT_LESSER_50_THOUSAND = BigDecimal.valueOf(10_000);
     public static final BigDecimal AMOUNT_NEGATIVE = BigDecimal.valueOf(-10_000);
 
+    // risk score
+    public static final double RISK_SCORE_0_7 = 0.7;
+    public static final double RISK_SCORE_0_4 = 0.4;
+
 
 }

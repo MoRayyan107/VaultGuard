@@ -28,6 +28,9 @@ public class Users {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
+    @Column(nullable = false, unique = true)
+    private String email;
+
     @Override
     public String toString() {
         return "Users{" +
