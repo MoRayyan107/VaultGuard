@@ -6,38 +6,62 @@
 # ==========================================
 # Configuration
 # ==========================================
+REGISTER_URL="http://localhost:8080/api/auth/register"
 LOGIN_URL="http://localhost:8080/api/auth/login"
 TRANSACTION_URL="http://localhost:8080/api/v1/fraudDetect/processTransaction"
-REQUEST_COUNT=50 # Change this to test larger bucket capacities
+REQUEST_COUNT=100 # Change this to test larger bucket capacities
 
-echo "[1/3] Logging in as alex_analyst..."
+TEST_USERNAME="ci_user_$(date +%s)_$RANDOM"
+TEST_PASSWORD="Alex@12345"
+TEST_EMAIL="${TEST_USERNAME}@test.com"
+
+echo "[1/4] Registering test user: ${TEST_USERNAME}..."
 
 # ==========================================
-# Step 1: Login & Capture JSON Response
+# Step 1: Register user & Capture JSON Response
+# ==========================================
+REGISTER_RESPONSE=$(curl -s -i -X POST "$REGISTER_URL" \
+                   -H "Content-Type: application/json" \
+                   -d "{\"username\": \"${TEST_USERNAME}\", \"password\": \"${TEST_PASSWORD}\", \"email\": \"${TEST_EMAIL}\"}")
+
+REGISTER_STATUS=$(echo "$REGISTER_RESPONSE" | grep -Fi "HTTP/" | awk '{print $2}')
+
+if [ "$REGISTER_STATUS" != "200" ] && [ "$REGISTER_STATUS" != "201" ]; then
+  echo "❌ CRITICAL: Registration failed with status ${REGISTER_STATUS:-000}"
+  echo "DEBUG: Full register response:"
+  echo "$REGISTER_RESPONSE"
+  exit 1
+fi
+
+# ==========================================
+# Step 2: Login & Capture JSON Response
 # ==========================================
 LOGIN_RESPONSE=$(curl -s -X POST "$LOGIN_URL" \
                    -H "Content-Type: application/json" \
-                   -d '{"username": "alex_analyst", "password": "alex@123"}')
+                   -d "{\"username\": \"${TEST_USERNAME}\", \"password\": \"${TEST_PASSWORD}\"}")
 
 # ==========================================
-# Step 2: Extract the JWT Token from JSON using grep/sed
+# Step 3: Extract the JWT Token from JSON using grep/sed
 # ==========================================
 # Extract token from JSON response without jq
 TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"userJwt":"[^"]*' | cut -d'"' -f4)
 
 if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
   echo "❌ CRITICAL: Failed to extract JWT Token!"
+  echo "DEBUG: Full register response:"
+  echo "$REGISTER_RESPONSE"
   echo "DEBUG: Full login response:"
   echo "$LOGIN_RESPONSE"
   exit 1
 fi
 
-echo "✅ Login Successful! Token acquired."
-echo "[2/3] Preparing to execute $REQUEST_COUNT concurrent transactions..."
+echo "✅ Registration successful!"
+echo "✅ Login successful! Token acquired."
+echo "[2/4] Preparing to execute $REQUEST_COUNT concurrent transactions..."
 echo "--------------------------------------------------------"
 
 # ==========================================
-# Step 3: Hammer the Protected Endpoint
+# Step 4: Hammer the Protected Endpoint
 # ==========================================
 for ((i=1; i<=REQUEST_COUNT; i++)); do
   # Fire the request and capture the full response including headers
@@ -71,5 +95,5 @@ for ((i=1; i<=REQUEST_COUNT; i++)); do
 done
 
 echo "--------------------------------------------------------"
-echo "[3/3] Test complete."
+echo "[4/4] Test complete."
 echo "--------------------------------------------------------"

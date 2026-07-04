@@ -59,3 +59,25 @@ app:
       refill-period: ${USER_REFILL_DURATION_MILLISECONDS}
 
 
+logging:
+  pattern:
+    # pattern -> [Thread] [Level] - Message
+    console: "%clr([%15.15t]){faint} %clr(%-5p) %clr(---){faint} %m%n"
+  level:
+    # Only show warnings and errors for the following packages
+    root: INFO
+    org.springframework: INFO
+    org.apache.kafka: WARN
+    org.apache.tomcat: WARN
+
+    # Only show warnings and errors for the following packages
+    org.hibernate: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+
+    # Show info logs for the following packages
+    com.guard.vaultguard: WARN
+
+    com.guard.vaultguard.config.DataSeeder: INFO
+
+

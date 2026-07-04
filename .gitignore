@@ -33,7 +33,7 @@ build/
 .vscode/
 
 # properties
-.env
+backend/.env
 Notes
 **/secrets/
 

@@ -1,7 +1,5 @@
 package com.guard.vaultguard.config;
 
-import com.guard.vaultguard.entities.enums.UserRole;
-
 public final class Constants {
 
     // Controllers
