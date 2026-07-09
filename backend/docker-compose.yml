@@ -5,14 +5,17 @@ services:
     image: confluentinc/cp-kafka:7.5.0
     container_name: vaultguard-kafka
     ports:
-      - "${KAFKA_BOOTSTRAP_PORT}:9092"
+      - "${KAFKA_BOOTSTRAP_PORT}:9094"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      # internal is for container communication, External is local-machine communication
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093
+      # let the container listens to port 9092 and localhost to port 9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9094
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_LOG_DIRS: /var/lib/kafka/data
@@ -53,13 +56,9 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - .env
+      - .env.docker
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DATASOURCE_NAME}
-      - REDIS_HOST=redis
-      - KAFKA_BOOTSTRAP_HOST=kafka
-      - KAFKA_BOOTSTRAP_PORT=9092
     depends_on:
       kafka:
         condition: service_started

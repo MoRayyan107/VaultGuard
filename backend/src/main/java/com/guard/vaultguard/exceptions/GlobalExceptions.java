@@ -20,6 +20,14 @@ public class GlobalExceptions {
         return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(value = InvalidCredentialException.class)
+    public ResponseEntity<Map<String,Object>> handleInvalidCredentialException(InvalidCredentialException ex){
+        Map<String, Object> map =
+                buildErrorResponse(HttpStatus.UNAUTHORIZED, ex, "Invalid Credentials");
+
+        return new ResponseEntity<>(map, HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(value = DuplicateUsernameException.class)
     public ResponseEntity<Map<String,Object>> handleDuplicateUsernameException(DuplicateUsernameException ex) {
         Map<String, Object> map =

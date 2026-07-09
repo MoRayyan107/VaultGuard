@@ -24,6 +24,11 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 import static com.guard.vaultguard.config.Constants.PUBLIC_ENDPOINTS;
 
@@ -32,9 +37,9 @@ import static com.guard.vaultguard.config.Constants.PUBLIC_ENDPOINTS;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    private final UserDetailServiceImpl userDetailService;
-    private final JwtAuthenticationFilter jwtFilter;
     private final ObjectMapper mapper;
+    private final JwtAuthenticationFilter jwtFilter;
+    private final UserDetailServiceImpl userDetailService;
     private final IpRateLimitingFilter ipRateLimitingFilter;
     private final UserRateLimitingFilter userRateLimitingFilter;
 
@@ -55,7 +60,7 @@ public class SecurityConfig {
 
         return http
                 .csrf(AbstractHttpConfigurer::disable) // jwt handels csrf, so we can disable it
-                .cors(AbstractHttpConfigurer::disable) // for now disable cors, will enable later oncce FE is implemented or any microservices are calling this API
+                .cors(c -> c.configurationSource(corsConfigurationSource())) // for now disable cors, will enable later oncce FE is implemented or any microservices are calling this API
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                                 .anyRequest().authenticated())
@@ -63,9 +68,7 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(ipRateLimitingFilter, JwtAuthenticationFilter.class) // Add before we cchecck the token
-
                 .addFilterAfter(userRateLimitingFilter, JwtAuthenticationFilter.class) // Add after we check the token, so we can get the user from the token and rate limit based on user
-
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint()))  // authentication entry point for 401's
                 .exceptionHandling(ex -> ex.accessDeniedHandler(userAccessDenialHandler()))  // access denied handler for 403's
                 .build();
@@ -104,5 +107,19 @@ public class SecurityConfig {
     @Bean
     public AccessDeniedHandler userAccessDenialHandler() {
         return new UserAccessDenial(mapper);
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        // allows diffrent cross site applications to use APIs
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:5173"));
+        configuration.setAllowedMethods(List.of("GET", "POST"));
+        configuration.addAllowedHeader("*");
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

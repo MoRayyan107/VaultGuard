@@ -21,6 +21,7 @@ public class TransactionResponse {
     private LocalDateTime transactionDate;
     private UUID transactionId;
     private String recipientAccountNumber;
+    private String senderLocation;
     private String senderAccountNumber;
     private Double riskScore;
     private LocalDateTime resolvedAt;
@@ -32,6 +33,7 @@ public class TransactionResponse {
                 .recipientAccountNumber(trx.getRecipientAccountNumber())
                 .transactionAmount(trx.getAmount())
                 .transactionDate(trx.getTransactionDate())
+                .senderLocation(trx.getSenderLocation())
                 .transactionType(trx.getTransactionType())
                 .transactionStatus(trx.getTransactionStatus())
                 .riskScore(trx.getRiskScore())

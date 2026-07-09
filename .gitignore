@@ -34,6 +34,8 @@ build/
 
 # properties
 backend/.env
+backend/.env.docker
+frontend/.env
 Notes
 **/secrets/
 

@@ -5,6 +5,7 @@ import com.guard.vaultguard.dto.users.UserResponse;
 import com.guard.vaultguard.entities.Users;
 import com.guard.vaultguard.entities.enums.UserRole;
 import com.guard.vaultguard.exceptions.DuplicateUsernameException;
+import com.guard.vaultguard.exceptions.InvalidCredentialException;
 import com.guard.vaultguard.exceptions.InvalidUserDataException;
 import com.guard.vaultguard.repositories.UserRepository;
 import com.guard.vaultguard.security.jwt.JwtUtil;
@@ -78,7 +79,7 @@ public class UserService{
             return buildUserResponse(username, role, token);
         } catch (BadCredentialsException e) {
             log.warn("[WARN] Authentication failed for user: {}", request.getUsername(), e);
-            throw new InvalidUserDataException("Invalid username or password");
+            throw new InvalidCredentialException("Invalid username or password");
         }
     }
 
