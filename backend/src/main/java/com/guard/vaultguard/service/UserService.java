@@ -41,7 +41,7 @@ public class UserService{
     }
 
     public UserResponse registerUser(UserRequest request) {
-        if (!isValidUserInputs(request)) throw new InvalidUserDataException("Username or Password is empty");
+        if (!validateUserInputs(request)) throw new InvalidUserDataException("Username or Password is empty");
 
         Users newUser = Users.builder()
                 .username(request.getUsername())
@@ -63,7 +63,7 @@ public class UserService{
     }
 
     public UserResponse verifyUserOnLogin(UserRequest request) {
-        if (!isValidUserInputs(request)) throw new InvalidUserDataException("Username or Password is empty");
+        if (!validateUserInputs(request)) throw new InvalidUserDataException("Username or Password is empty");
 
         try {
             Authentication auth = authManager.authenticate(
@@ -71,6 +71,14 @@ public class UserService{
             );
 
             UserPrincipal authenticated = (UserPrincipal) auth.getPrincipal();
+
+            // dont login if the user is not a manager or analyst
+            if (!UserRole.MANAGER.name().equalsIgnoreCase(authenticated.getRole()) &&
+                !UserRole.ANALYST.name().equalsIgnoreCase(authenticated.getRole()))
+            {
+                log.warn("[WARN] User {} with role {} attempted to access a restricted resource", authenticated.getUsername(), authenticated.getRole());
+                throw new InvalidCredentialException("User does not have the required role to access this resource");
+            }
 
             String username = authenticated.getUsername();
             String role = "ROLE_"+authenticated.getRole().toUpperCase();
@@ -95,8 +103,12 @@ public class UserService{
         return res.build();
     }
 
-    private boolean isValidUserInputs(UserRequest request){
-        if (StringUtils.hasText(request.getUsername()) && StringUtils.hasText(request.getPassword())) return true;
+    private boolean validateUserInputs(UserRequest request){
+        if (StringUtils.hasText(request.getUsername()) &&
+                StringUtils.hasText(request.getPassword()))
+        {
+            return true;
+        }
 
         // works if the inputs are empty or null
         log.error("[ERROR] Username or Password is empty");
