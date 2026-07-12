@@ -1,38 +1,20 @@
-import {useEffect, useState} from "react";
-import type {Transaction} from "../types/transaction.ts";
-import api from "../api/axios.ts";
-
+import {useEffect} from "react";
+import {useTransactions} from "../context/TransactionContext.tsx";
 
 function Dashboard() {
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [loading,  setLoading] = useState<boolean>(true);
-    const [error, setError] =  useState<string>('');
+    const {transactions, loading, error, fetchTransactions} =  useTransactions();
 
     useEffect(() => {
-        const fetchedResponse = async () => {
-            try {
-                const response = await api.get("api/v1/fraudDetect/fetch/allTransactions");
-                setTransactions(response.data);
-            } catch (error: any) {
-                if (error.response && error.response.data && error.response.data.message) {
-                    setError(error.response.data.message);
-                } else {
-                    setError("An error occurred. Please try again.");
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchedResponse();
+        fetchTransactions();
     }, []);
 
     if (loading) return <p>Loading Transactions...</p>
-    if (error) return <p className="error">{error}</p>
 
     return (
         <div>
             <h1>Dashboard</h1>
+            <button onClick={() => fetchTransactions(true)}>Refresh Transactions</button>
+            {error && <p className="error">{error}</p>}
             <table>
                 <thead>
                     <tr>

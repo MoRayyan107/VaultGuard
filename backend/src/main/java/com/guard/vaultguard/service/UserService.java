@@ -47,9 +47,8 @@ public class UserService{
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getEmail())
-                .role(UserRole.USER) // default role is USER
+                .role(request.getUserRole()) // default role is USER
                 .build();
-
         Users savedUser = null;
         try{
             savedUser = userRepository.save(newUser);
@@ -71,14 +70,6 @@ public class UserService{
             );
 
             UserPrincipal authenticated = (UserPrincipal) auth.getPrincipal();
-
-            // dont login if the user is not a manager or analyst
-            if (!UserRole.MANAGER.name().equalsIgnoreCase(authenticated.getRole()) &&
-                !UserRole.ANALYST.name().equalsIgnoreCase(authenticated.getRole()))
-            {
-                log.warn("[WARN] User {} with role {} attempted to access a restricted resource", authenticated.getUsername(), authenticated.getRole());
-                throw new InvalidCredentialException("User does not have the required role to access this resource");
-            }
 
             String username = authenticated.getUsername();
             String role = "ROLE_"+authenticated.getRole().toUpperCase();

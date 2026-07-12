@@ -1,6 +1,7 @@
 package com.guard.vaultguard.config;
 
 import com.guard.vaultguard.dto.users.UserRequest;
+import com.guard.vaultguard.entities.enums.UserRole;
 import com.guard.vaultguard.repositories.UserRepository;
 import com.guard.vaultguard.service.UserService;
 import jakarta.annotation.PreDestroy;
@@ -49,14 +50,14 @@ public class DataSeeder {
 
             // add the users into a array
             String[][] usersToSeed = {
-                    {"ROLE_USER", USERNAME_1, "ja@123", "jake@vaultguard.com"},
-                    {"ROLE_ANALYST", USERNAME_2, "alex@123", "alex@vaultguard.com"},
-                    {"ROLE_MANAGER", USERNAME_3, "mitch@123", "mitch@vaultguard.com"}
+                    {UserRole.USER.name(), USERNAME_1, "ja@123", "jake@vaultguard.com"},
+                    {UserRole.ANALYST.name(), USERNAME_2, "alex@123", "alex@vaultguard.com"},
+                    {UserRole.MANAGER.name(), USERNAME_3, "mitch@123", "mitch@vaultguard.com"}
             };
 
             // register the users
             for (String[] userData : usersToSeed) {
-                String role = userData[0];
+                UserRole role = UserRole.valueOf(userData[0]);
                 String username = userData[1];
                 String password = userData[2];
                 String email = userData[3];
@@ -66,6 +67,7 @@ public class DataSeeder {
                     UserRequest req = new UserRequest();
                     req.setUsername(username);
                     req.setPassword(password);
+                    req.setUserRole(role);
                     req.setEmail(email);
                     authService.registerUser(req);
                     totalUsers++;
