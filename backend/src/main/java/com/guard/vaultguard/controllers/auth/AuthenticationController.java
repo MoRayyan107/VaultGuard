@@ -3,6 +3,7 @@ package com.guard.vaultguard.controllers.auth;
 import com.guard.vaultguard.dto.users.UserRequest;
 import com.guard.vaultguard.dto.users.UserResponse;
 import com.guard.vaultguard.service.UserService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,7 +26,7 @@ public class AuthenticationController {
     public ResponseEntity<Map<String, Object>> login(@RequestBody UserRequest userRequest) {
         UserResponse res = userService.verifyUserOnLogin(userRequest);
 
-        return ResponseEntity.ok(UserResponse.buildUserResponse(res, "Login Successful"));
+        return ResponseEntity.ok(UserResponse.buildUserResponse(HttpStatus.OK, res, "Login Successful"));
 
     }
 
@@ -34,7 +35,7 @@ public class AuthenticationController {
 
         UserResponse res = userService.registerUser(userRequest);
 
-        return ResponseEntity.ok(UserResponse.buildUserResponse(res, "Registration Successful"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.buildUserResponse(HttpStatus.CREATED, res, "Registration Successful"));
     }
 
 

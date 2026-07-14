@@ -2,6 +2,7 @@ package com.guard.vaultguard.dto.users;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -17,10 +18,11 @@ public class UserResponse {
     private String jwtType;
     private String role;
 
-    public static Map<String, Object> buildUserResponse(UserResponse res, String message) {
+    public static Map<String, Object> buildUserResponse(HttpStatus statusCode, UserResponse res, String message) {
         return Map.of(
                 "user", res,
                 "message", message,
+                "Status code", statusCode,
                 "TimeStamp", LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString()
         );
     }

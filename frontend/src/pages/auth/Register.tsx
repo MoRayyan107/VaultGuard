@@ -66,6 +66,9 @@ function Register() {
                 <button type="submit" disabled={loading}>
                     {loading ? "Registering..." : "Register"}
                 </button>
+                <button onClick={() => navigate("/login")}>
+                    Already have an account? Login
+                </button>
             </form>
             {error && <p style={{ color: "red" }}>{error}</p>}
         </div>
