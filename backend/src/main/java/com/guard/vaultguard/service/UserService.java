@@ -47,7 +47,7 @@ public class UserService{
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getEmail())
-                .role(request.getUserRole()) // default role is USER
+                .role(UserRole.USER) // default role is USER
                 .build();
         Users savedUser = null;
         try{

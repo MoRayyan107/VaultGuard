@@ -18,8 +18,8 @@ public class UserRequest {
     @NotBlank
     private String password;
 
-    @JsonProperty("user_role")
-    private UserRole userRole;
+//    @JsonProperty("user_role")
+//    private UserRole userRole;
 
     @NotBlank
     private String email;

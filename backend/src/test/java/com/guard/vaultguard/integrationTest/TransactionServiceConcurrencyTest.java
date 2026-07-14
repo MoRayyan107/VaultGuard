@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @Testcontainers
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-// TODO: Redis consurenccy is done, Kafka is left
+// TODO: Redis concurrency is done, Kafka is left
 class TransactionServiceConcurrencyTest {
 
     @Autowired

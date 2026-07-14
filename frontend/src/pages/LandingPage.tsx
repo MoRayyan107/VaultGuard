@@ -14,6 +14,7 @@ function LandingPage() {
                 activity for review by authorized analysts and admins.
             </p>
             <button onClick={() => navigate("/login")}>Login</button>
+            <button onClick={() => navigate("/register")}>Register</button>
         </div>
     );
 }
