@@ -67,7 +67,6 @@ public class DataSeeder {
                     UserRequest req = new UserRequest();
                     req.setUsername(username);
                     req.setPassword(password);
-                    req.setUserRole(role);
                     req.setEmail(email);
                     authService.registerUser(req);
                     totalUsers++;
