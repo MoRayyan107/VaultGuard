@@ -24,6 +24,8 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -58,9 +60,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
+        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+        requestHandler.setCsrfRequestAttributeName(null);
+
         return http
-                .csrf(AbstractHttpConfigurer::disable) // jwt handels csrf, so we can disable it
-                .cors(c -> c.configurationSource(corsConfigurationSource())) // for now disable cors, will enable later oncce FE is implemented or any microservices are calling this API
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRequestHandler(requestHandler)
+                        .ignoringRequestMatchers(PUBLIC_ENDPOINTS))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // for now disable cors, will enable later oncce FE is implemented or any microservices are calling this API
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                                 .anyRequest().authenticated())
@@ -115,7 +123,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of("http://localhost:5173"));
         configuration.setAllowedMethods(List.of("GET", "POST"));
-        configuration.addAllowedHeader("*");
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

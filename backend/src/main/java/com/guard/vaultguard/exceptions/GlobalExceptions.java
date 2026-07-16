@@ -47,7 +47,7 @@ public class GlobalExceptions {
     private Map<String, Object> buildErrorResponse(HttpStatus status, Exception ex, String issue) {
         Map<String, Object> map = new HashMap<>();
         map.put("message", ex.getMessage());
-        map.put("Status", status);
+        map.put("Status", status.value());
         map.put("issue", issue);
         map.put("Timestamp", LocalDateTime.now().toString());
 

@@ -43,6 +43,11 @@ spring:
       password: ${REDIS_PASSWORD}
 
 app:
+  cookie:
+    secure: ${COOKIE_SECURE}
+    name: ${COOKIE_NAME}
+    http-only: ${COOKIE_HTTP_ONLY}
+
   kafka:
     topic: ${KAFKA_TOPIC}
   jwt:

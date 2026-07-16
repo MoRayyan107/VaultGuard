@@ -29,6 +29,16 @@ public class UserRateLimitingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
+
+        // skipp the rate limiter for Swagger
+        String urlPath = request.getRequestURI();
+        if (urlPath.startsWith("/v3/api-docs") ||
+                urlPath.startsWith("/swagger-ui") ||
+                urlPath.equals("/api/auth/register"))
+        {
+            filterChain.doFilter(request, response);
+            return;
+        }
         // get the security context and get the authentication
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 

@@ -3,6 +3,7 @@ import api from "../../api/axios.ts";
 import * as React from "react";
 import { useNavigate } from 'react-router-dom';
 import {useAuth} from "../../context/AuthContext.tsx";
+import axios from "axios";
 
 function Login() {
     const navigate = useNavigate();
@@ -14,7 +15,6 @@ function Login() {
     const handleSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
         // prevent default browser behavior for Single Page Applications (SPA)
         event.preventDefault();
-        setError('');
 
         try{
             // get the login response from the backend API
@@ -24,21 +24,25 @@ function Login() {
 
             // set userJwt, role, and username in localStorage for future use
             // used deconstruct username to avoid confusion with the username state variable
-            const {userJwt, role, username: responseUsername} = loginResponse.data.user;
+            const {role, username: responseUsername} = loginResponse.data.user;
 
             // create authData Object
-            const authData = {token: userJwt, role, username: responseUsername}
+            const authData = {role, username: responseUsername}
 
             login(authData);
 
             // navigate to dashboard
             navigate("/dashboard");
 
-        } catch (error: any) {
-            if (error.response && error.response.data && error.response.data.message) {
-                setError(error.response.data.message);
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                if (error.response?.data?.message && error.response.status === 401) {
+                    setError(error.response.data.message);
+                } else {
+                    setError("An error occurred. Please try again.");
+                }
             } else {
-                setError("An error occurred. Please try again.");
+                setError("An unexpected error occurred. Please try again.");
             }
         }
     };

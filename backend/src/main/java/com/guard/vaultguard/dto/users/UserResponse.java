@@ -15,7 +15,6 @@ import java.util.Map;
 public class UserResponse {
     private String username;
     private String userJwt;
-    private String jwtType;
     private String role;
 
     public static Map<String, Object> buildUserResponse(HttpStatus statusCode, UserResponse res, String message) {

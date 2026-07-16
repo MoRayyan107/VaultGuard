@@ -5,7 +5,7 @@ import * as React from "react";
 // Define the AuthContextType interface
 interface AuthContextType {
     authData: AuthData | null;
-    logout: () => void;
+    logout: () => Promise<void>;
     login: (data: AuthData) => void;
 }
 
@@ -22,25 +22,26 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
 
     // login function
     const login = (data: AuthData) => {
-        if (!data || !data.token || data.token.trim() === "") {
+        if (!data || !data.role || !data.username) {
             console.error("Invalid auth data provided to login function");
             return;
         }
+
         try{
             localStorage.setItem("authData", JSON.stringify(data));
             setAuthData(data);
         } catch (error) {
-            throw new Error("Failed to save auth data to localStorage: " + error);
+            throw new Error(`Failed to save auth data to localStorage: ${error}`);
         }
     }
 
     // logout function to clear the local storage and set authData to null
-    const logout = () => {
+    const logout = async () => {
         try {
             localStorage.removeItem("authData");
             setAuthData(null);
         } catch (error) {
-            throw new Error("Failed to remove auth data from localStorage: " + error);
+            throw new Error("Failed to remove auth data from localStorage");
         }
     };
 

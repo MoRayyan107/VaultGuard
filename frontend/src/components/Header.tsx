@@ -1,13 +1,20 @@
 import {useNavigate} from "react-router-dom";
 import {useAuth} from "../context/AuthContext.tsx";
+import api from "../api/axios.ts";
 
 function Header() {
     const navigate = useNavigate();
     const {authData, logout} = useAuth();
 
-    const handleLogout = () => {
-        logout();
-        navigate("/login");
+    const handleLogout = async () => {
+        try{
+            await api.post("/api/auth/logout");
+
+            await logout();
+            navigate("/login");
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
     }
 
     return (
