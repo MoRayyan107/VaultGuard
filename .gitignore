@@ -37,6 +37,7 @@ backend/.env
 backend/.env.docker
 frontend/.env
 Notes
+InserQueriesTestingOnly
 **/secrets/
 
 # Redis Dump

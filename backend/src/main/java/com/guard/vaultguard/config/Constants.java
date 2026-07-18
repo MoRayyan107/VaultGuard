@@ -4,7 +4,9 @@ public final class Constants {
 
     // Controllers
     public static final String[] PUBLIC_ENDPOINTS = {
-            "/api/auth/**",     // authentication endpoints (login logout)
+            // only login and logout are public, all other endpoints require authentication
+            "/api/auth/login",
+            "/api/auth/logout",
 
             // Swagger
             "/v3/api-docs/**",

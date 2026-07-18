@@ -32,6 +32,7 @@ public class AuthenticationController {
 
     }
 
+    @PreAuthorize("hasRole('ROLE_MANAGER')")
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody UserRequest userRequest) {
 
@@ -40,7 +41,6 @@ public class AuthenticationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.buildUserResponse(HttpStatus.CREATED, res, "Registration Successful"));
     }
 
-    @PreAuthorize("hasRole('ROLE_ANALYST') or hasRole('ROLE_MANAGER')")
     @PostMapping("/logout")
     public ResponseEntity<Map<String, Object>> logout(HttpServletResponse response) {
         UserResponse res = userService.logoutUser(response);

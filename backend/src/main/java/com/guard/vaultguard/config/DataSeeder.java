@@ -1,6 +1,7 @@
 package com.guard.vaultguard.config;
 
 import com.guard.vaultguard.dto.users.UserRequest;
+import com.guard.vaultguard.entities.Users;
 import com.guard.vaultguard.entities.enums.UserRole;
 import com.guard.vaultguard.repositories.UserRepository;
 import com.guard.vaultguard.service.UserService;
@@ -10,6 +11,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 
 // The logic was made by AI
@@ -37,7 +39,7 @@ public class DataSeeder {
     }
 
     @Bean
-    CommandLineRunner initDatabase(UserService authService) {
+    CommandLineRunner initDatabase(PasswordEncoder passwordEncoder) {
         return args -> {
             long startTime = System.currentTimeMillis();
             int totalUsers = 0;
@@ -64,11 +66,14 @@ public class DataSeeder {
                 boolean isSeeded = false;
 
                 try {
-                    UserRequest req = new UserRequest();
-                    req.setUsername(username);
-                    req.setPassword(password);
-                    req.setEmail(email);
-                    authService.registerUser(req);
+                    Users user = Users.builder()
+                            .username(username)
+                            .password(passwordEncoder.encode(password))
+                            .email(email)
+                            .role(role)
+                            .build();
+
+                    userRepository.save(user);
                     totalUsers++;
                     isSeeded = true;
                 } catch (Exception ignored) {
