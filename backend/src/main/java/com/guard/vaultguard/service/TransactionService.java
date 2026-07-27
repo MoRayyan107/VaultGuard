@@ -9,6 +9,7 @@ import com.guard.vaultguard.exceptions.IllegalTransactionException;
 import com.guard.vaultguard.kafka.TransactionProducer;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,40 +26,48 @@ import static com.guard.vaultguard.config.Constants.MAX_TIME_DIFF_LOCATION_CHANG
 import static com.guard.vaultguard.config.Constants.MIN_TIME_DIFF_LOCATION_CHANGE_SECONDS;
 
 @Service
+@Slf4j
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final StringRedisTemplate redisTemplate;
     private final TransactionProducer transactionProducer;
-
-    private final static Logger log = LoggerFactory.getLogger(TransactionService.class);
+    private final BankService bankService;
 
     public TransactionService(TransactionRepository transactionRepository,
                               StringRedisTemplate redisTemplate,
-                              TransactionProducer transactionProducer)
+                              TransactionProducer transactionProducer,
+                              BankService bankService)
     {
         this.transactionRepository = transactionRepository;
         this.redisTemplate = redisTemplate;
         this.transactionProducer = transactionProducer;
+        this.bankService = bankService;
     }
 
     @Transactional
     public Transaction processTransaction(TransactionRequest trx){
         if (!validateTransaction(trx)) throw new IllegalTransactionException("Invalid transaction data");
 
-        Transaction transaction = Transaction.builder()
+        Transaction.TransactionBuilder transaction = Transaction.builder()
                 .senderAccountNumber(trx.getSenderAccountNumber())
-                .recipientAccountNumber(trx.getRecipientAccountNumber())
+                .senderBank(bankService.getBankByCode(trx.getSenderBankCode()))
                 .amount(trx.getAmount())
                 .transactionType(trx.getTransactionType())
                 .senderLocation(trx.getSenderLocation())
 
                 // default values when making a transaction
                 .transactionStatus(TransactionStatus.PENDING)
-                .transactionDate(LocalDateTime.now())
-                .build();
+                .transactionDate(LocalDateTime.now());
 
-        Transaction savedTransaction = transactionRepository.save(transaction);
+        if (trx.getRecipientAccountNumber() != null && trx.getRecipientBankCode() != null) {
+            transaction.recipientAccountNumber(trx.getRecipientAccountNumber())
+                    .recipientBank(bankService.getBankByCode(trx.getRecipientBankCode()));
+        }
+
+
+
+        Transaction savedTransaction = transactionRepository.save(transaction.build());
 
         log.info("[INFO] Transaction saved with ID: {}", savedTransaction.getId());
         transactionProducer.sendTransaction(savedTransaction);

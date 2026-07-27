@@ -44,6 +44,14 @@ public class GlobalExceptions {
         return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(value = BankCodeNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleBankCodeNotFoundException(BankCodeNotFoundException ex) {
+        Map<String, Object> map =
+                buildErrorResponse(HttpStatus.NOT_FOUND, ex, "Bank not found");
+
+        return new ResponseEntity<>(map, HttpStatus.NOT_FOUND);
+    }
+
     private Map<String, Object> buildErrorResponse(HttpStatus status, Exception ex, String issue) {
         Map<String, Object> map = new HashMap<>();
         map.put("message", ex.getMessage());

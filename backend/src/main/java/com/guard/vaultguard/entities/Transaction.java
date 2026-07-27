@@ -27,6 +27,11 @@ public class Transaction {
     @Column(length = 100, nullable = false)
     private String senderAccountNumber;
 
+    // Fetch type lazy since we need evaluate the client bank to be active
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender_bank_code", nullable = false)
+    private Bank senderBank;
+
     @Column(nullable = false)
     private String senderLocation;
 
@@ -35,6 +40,10 @@ public class Transaction {
 
     @Column(length = 100)
     private String recipientAccountNumber;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipient_bank_code")
+    private Bank recipientBank;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)

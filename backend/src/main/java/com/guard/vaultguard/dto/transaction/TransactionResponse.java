@@ -1,5 +1,6 @@
 package com.guard.vaultguard.dto.transaction;
 
+import com.guard.vaultguard.entities.Bank;
 import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
@@ -26,19 +27,31 @@ public class TransactionResponse {
     private Double riskScore;
     private LocalDateTime resolvedAt;
 
+    // bank sender and receier codes
+    private String senderBank;
+    private String recipientBank;
+
     public static TransactionResponse buildTransactionResponse(Transaction trx){
-        return TransactionResponse.builder()
+        TransactionResponse.TransactionResponseBuilder resBuilder = TransactionResponse.builder()
                 .transactionId(trx.getId())
                 .senderAccountNumber(trx.getSenderAccountNumber())
-                .recipientAccountNumber(trx.getRecipientAccountNumber())
+                .senderBank(trx.getSenderBank().getBankName())
                 .transactionAmount(trx.getAmount())
                 .transactionDate(trx.getTransactionDate())
                 .senderLocation(trx.getSenderLocation())
                 .transactionType(trx.getTransactionType())
                 .transactionStatus(trx.getTransactionStatus())
                 .riskScore(trx.getRiskScore())
-                .resolvedAt(trx.getResolvedAt())
-                .build();
+                .resolvedAt(trx.getResolvedAt());
+
+        // checks if theres a recipient bank and account number
+        if (trx.getRecipientBank() != null && trx.getRecipientAccountNumber() != null) {
+            resBuilder
+                    .recipientBank(trx.getRecipientBank().getBankName())
+                    .recipientAccountNumber(trx.getRecipientAccountNumber());
+        }
+
+        return resBuilder.build();
     }
 
     public static List<TransactionResponse> mapToResponse(List<Transaction> trx){

@@ -16,7 +16,12 @@ public class TransactionRequest {
     @NotBlank
     private String senderAccountNumber;
 
+    @NotBlank
+    private String senderBankCode;
+
     private String recipientAccountNumber;
+
+    private String recipientBankCode;
 
     @NotNull
     private BigDecimal amount;
