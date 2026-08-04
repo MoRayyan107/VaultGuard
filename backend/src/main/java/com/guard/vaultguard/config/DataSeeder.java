@@ -1,12 +1,15 @@
 package com.guard.vaultguard.config;
 
 import com.guard.vaultguard.entities.Bank;
+import com.guard.vaultguard.entities.RiskManagement;
 import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.Users;
+import com.guard.vaultguard.entities.enums.RiskLevel;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
 import com.guard.vaultguard.entities.enums.UserRole;
 import com.guard.vaultguard.repositories.BankRepository;
+import com.guard.vaultguard.repositories.RiskManagmentRepository;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import com.guard.vaultguard.repositories.UserRepository;
 import jakarta.annotation.PreDestroy;
@@ -46,11 +49,16 @@ public class DataSeeder {
     private final UserRepository userRepository;
     private final BankRepository bankRepository;
     private final TransactionRepository transactionRepository;
+    private final RiskManagmentRepository riskManagmentRepository;
 
-    public DataSeeder(UserRepository userRepository, BankRepository bankRepository, TransactionRepository transactionRepository) {
+    public DataSeeder(UserRepository userRepository,
+                      BankRepository bankRepository,
+                      TransactionRepository transactionRepository,
+                      RiskManagmentRepository riskManagmentRepository) {
         this.userRepository = userRepository;
         this.bankRepository = bankRepository;
         this.transactionRepository = transactionRepository;
+        this.riskManagmentRepository = riskManagmentRepository;
     }
 
     // a small record for representing the transaction data to be seeded
@@ -59,7 +67,7 @@ public class DataSeeder {
             BigDecimal amount,
             String recipientAccountNumber, String recipientBankCode,
             TransactionType type, TransactionStatus status,
-            int daysAgo, Double riskScore, boolean resolved
+            int daysAgo, Double riskScore, RiskLevel riskLevel
     ) {}
 
     // add the users into a array
@@ -77,18 +85,19 @@ public class DataSeeder {
     };
 
     SeedTransaction[] transactionsToSeed = {
-            new SeedTransaction("ACC10001", "SCOTBANK", "Glasgow, UK", new BigDecimal("250.00"), "ACC20001", "HSBCUK", TransactionType.TRANSFER, TransactionStatus.COMPLETED, 9, 0.1, true),
-            new SeedTransaction("ACC10002", "HSBCUK", "London, UK", new BigDecimal("75.50"), "ACC20002", "SCOTBANK", TransactionType.DEPOSIT, TransactionStatus.COMPLETED, 8, 0.2, true),
-            new SeedTransaction("ACC10003", "SCOTBANK", "Bengaluru, IN", new BigDecimal("1200.00"), null, null, TransactionType.WITHDRAW, TransactionStatus.COMPLETED, 7, 0.3, true),
-            new SeedTransaction("ACC10004", "EMIRATESNBD", "Karachi, PK", new BigDecimal("630.75"), "ACC20004", "HSBCUK", TransactionType.WITHDRAW, TransactionStatus.FAILED, 6, 0.4, true),
-            new SeedTransaction("ACC10005", "SCOTBANK", "Manchester, UK", new BigDecimal("42.00"), null, null, TransactionType.DEPOSIT, TransactionStatus.PENDING, 5, 0.5, false),
-            new SeedTransaction("ACC10006", "HSBCUK", "Edinburgh, UK", new BigDecimal("88.20"), null, null, TransactionType.WITHDRAW, TransactionStatus.PENDING, 4, 0.6, false),
-            new SeedTransaction("ACC10007", "EMIRATESNBD", "Dubai, UAE", new BigDecimal("5000.00"), "ACC20007", "SCOTBANK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 3, 0.7, false),
-            new SeedTransaction("ACC10008", "LEGACYTRUST", "Lagos, NG", new BigDecimal("9800.00"), "ACC20008", "HSBCUK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 2, 0.8, false),
-            new SeedTransaction("ACC10009", "EMIRATESNBD", "Dubai, UAE", new BigDecimal("15000.00"), "ACC20009", "SCOTBANK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 1, 0.9, false)
+            new SeedTransaction("ACC10001", "SCOTBANK", "Glasgow, UK", new BigDecimal("250.00"), "ACC20001", "HSBCUK", TransactionType.TRANSFER, TransactionStatus.COMPLETED, 9, 0.1, RiskLevel.LOW),
+            new SeedTransaction("ACC10002", "HSBCUK", "London, UK", new BigDecimal("75.50"), "ACC20002", "SCOTBANK", TransactionType.DEPOSIT, TransactionStatus.COMPLETED, 8, 0.2, RiskLevel.LOW),
+            new SeedTransaction("ACC10003", "SCOTBANK", "Bengaluru, IN", new BigDecimal("1200.00"), null, null, TransactionType.WITHDRAW, TransactionStatus.COMPLETED, 7, 0.3, RiskLevel.LOW),
+            new SeedTransaction("ACC10004", "EMIRATESNBD", "Karachi, PK", new BigDecimal("630.75"), "ACC20004", "HSBCUK", TransactionType.WITHDRAW, TransactionStatus.FAILED, 6, 0.4, RiskLevel.MEDIUM),
+            new SeedTransaction("ACC10005", "SCOTBANK", "Manchester, UK", new BigDecimal("42.00"), null, null, TransactionType.DEPOSIT, TransactionStatus.PENDING, 5, 0.5, RiskLevel.MEDIUM),
+            new SeedTransaction("ACC10006", "HSBCUK", "Edinburgh, UK", new BigDecimal("88.20"), null, null, TransactionType.WITHDRAW, TransactionStatus.PENDING, 4, 0.6, RiskLevel.MEDIUM),
+            new SeedTransaction("ACC10007", "EMIRATESNBD", "Dubai, UAE", new BigDecimal("5000.00"), "ACC20007", "SCOTBANK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 3, 0.7, RiskLevel.HIGH),
+            new SeedTransaction("ACC10008", "LEGACYTRUST", "Lagos, NG", new BigDecimal("9800.00"), "ACC20008", "HSBCUK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 2, 0.8, RiskLevel.HIGH),
+            new SeedTransaction("ACC10009", "EMIRATESNBD", "Dubai, UAE", new BigDecimal("15000.00"), "ACC20009", "SCOTBANK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 1, 0.9, RiskLevel.HIGH)
     };
 
     private final List<Transaction> seededTransactions = new ArrayList<>();
+    private final List<RiskManagement> seededRiskManagement = new ArrayList<>();
     private final Map<String, Bank> bankMap = new HashMap<>();
 
     @Bean
@@ -109,7 +118,6 @@ public class DataSeeder {
                 String bankName = bankData[0];
                 String bankCode = bankData[1];
                 boolean active = Boolean.parseBoolean(bankData[2]);
-                totalBanks++;
                 boolean isSeeded = false;
 
                 try {
@@ -139,10 +147,10 @@ public class DataSeeder {
             }
 
             /// ----------------------------------------------------------------------------------
-            // seed the transactions
+            // seed the transactions + their risk management rows
             logBuilder.append(CYAN + "=========================== [TRANSACTIONS] =============================" + RESET + '\n');
             int totalTransactions = 0;
-            for (SeedTransaction t: transactionsToSeed) {
+            for (SeedTransaction t : transactionsToSeed) {
                 boolean isSeeded = false;
 
                 try {
@@ -156,14 +164,23 @@ public class DataSeeder {
                             .recipientAccountNumber(t.recipientAccountNumber())
                             .recipientBank(t.recipientBankCode() != null ? bankMap.get(t.recipientBankCode()) : null)
                             .transactionType(t.type())
-                            .transactionStatus(t.status())
                             .transactionDate(txDate)
-                            .riskScore(t.riskScore())
-                            .resolvedAt(t.resolved() ? txDate : null)
                             .build();
 
-                    transactionRepository.save(transaction);
-                    seededTransactions.add(transaction);
+                    Transaction savedTransaction = transactionRepository.save(transaction);
+                    seededTransactions.add(savedTransaction);
+
+                    RiskManagement risk = RiskManagement.builder()
+                            .transaction(savedTransaction)
+                            .riskScore(t.riskScore())
+                            .riskLevel(t.riskLevel())
+                            .transactionStatus(t.status())
+                            .createdAt(txDate)
+                            .build();
+
+                    RiskManagement savedRisk = riskManagmentRepository.save(risk);
+                    seededRiskManagement.add(savedRisk);
+
                     totalTransactions++;
                     isSeeded = true;
                 } catch (Exception ignored) {
@@ -247,7 +264,18 @@ public class DataSeeder {
             logBuilder.append(YELLOW + "Error removing seeded data: " + e.getMessage() + RESET + '\n');
         }
 
-        try{
+        // RiskManagement must be deleted BEFORE Transaction — transaction_id FK is
+        // NOT NULL on risk_management, so a Transaction row can't be removed while
+        // a RiskManagement row still references it (same dependency direction as
+        // banks-before-transactions on the way in, just reversed for teardown).
+        try {
+            riskManagmentRepository.deleteAll(seededRiskManagement);
+        } catch (Exception e) {
+            hasErrors = true;
+            logBuilder.append(YELLOW + "Error removing seeded risk management: " + e.getMessage() + RESET + '\n');
+        }
+
+        try {
             transactionRepository.deleteAll(seededTransactions);
         } catch (Exception e) {
             hasErrors = true;

@@ -13,10 +13,10 @@ function TransactionTable({title, transaction, error, loading, emptyMsg}: Transa
         <div>
             <h1>{title}</h1>
             {loading && <p>Loading...</p>}
-            {!loading && !error && transaction.length === 0 && <p>{emptyMsg || "No transactions found."}</p>}
-            {error && <p style={{color: 'red'}}>{error}</p>}
-            {!loading && !error && transaction.length > 0 && (
+            {!loading && transaction.length === 0 && <p>{emptyMsg || "No transactions found."}</p>}
+            {!loading && transaction.length > 0 && (
                 <table>
+                    {error && <p style={{color: 'red'}}>{error}</p>}
                     <thead>
                         <tr>
                             <th>ID</th>

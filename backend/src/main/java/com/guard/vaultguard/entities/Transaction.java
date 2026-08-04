@@ -18,7 +18,6 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-@ToString
 public class Transaction {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -45,20 +44,28 @@ public class Transaction {
     @JoinColumn(name = "recipient_bank_code")
     private Bank recipientBank;
 
+    @OneToOne(mappedBy = "transaction",fetch = FetchType.LAZY)
+    private RiskManagement riskManagement;
+
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private TransactionType transactionType;
 
     @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private TransactionStatus transactionStatus;
-
-    @Column(nullable = false)
     private LocalDateTime transactionDate;
 
-    @Column
-    private Double riskScore;
-
-    @Column
-    private LocalDateTime resolvedAt;
+    public String toString() {
+        return "Transaction{" +
+                "id=" + id +
+                ", senderAccountNumber='" + senderAccountNumber + '\'' +
+                ", senderBank=" + (senderBank != null ? senderBank.getBankCode() : null) +
+                ", senderLocation='" + senderLocation + '\'' +
+                ", amount=" + amount +
+                ", riskManagement=" + (riskManagement != null ? riskManagement.toString() : null) +
+                ", recipientAccountNumber='" + recipientAccountNumber + '\'' +
+                ", recipientBank=" + (recipientBank != null ? recipientBank.getBankCode() : null) +
+                ", transactionType=" + transactionType +
+                ", transactionDate=" + transactionDate +
+                '}';
+    }
 }

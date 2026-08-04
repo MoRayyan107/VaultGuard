@@ -2,22 +2,26 @@ package com.guard.vaultguard.service;
 
 import com.guard.vaultguard.dto.transaction.TransactionRequest;
 
+import com.guard.vaultguard.entities.RiskManagement;
 import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
 import com.guard.vaultguard.exceptions.IllegalTransactionException;
 import com.guard.vaultguard.kafka.TransactionProducer;
+import com.guard.vaultguard.repositories.RiskManagmentRepository;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -33,41 +37,40 @@ public class TransactionService {
     private final StringRedisTemplate redisTemplate;
     private final TransactionProducer transactionProducer;
     private final BankService bankService;
+    private final RiskManagmentService riskManagmentService;
+    private final RiskManagmentRepository riskManagmentRepository;
 
     public TransactionService(TransactionRepository transactionRepository,
+                              RiskManagmentService riskManagmentService,
                               StringRedisTemplate redisTemplate,
                               TransactionProducer transactionProducer,
-                              BankService bankService)
+                              BankService bankService, RiskManagmentRepository riskManagmentRepository)
     {
         this.transactionRepository = transactionRepository;
+        this.riskManagmentService = riskManagmentService;
         this.redisTemplate = redisTemplate;
         this.transactionProducer = transactionProducer;
         this.bankService = bankService;
+        this.riskManagmentRepository = riskManagmentRepository;
     }
 
     @Transactional
     public Transaction processTransaction(TransactionRequest trx){
         if (!validateTransaction(trx)) throw new IllegalTransactionException("Invalid transaction data");
 
-        Transaction.TransactionBuilder transaction = Transaction.builder()
+        Transaction transaction = Transaction.builder()
                 .senderAccountNumber(trx.getSenderAccountNumber())
                 .senderBank(bankService.getBankByCode(trx.getSenderBankCode()))
                 .amount(trx.getAmount())
                 .transactionType(trx.getTransactionType())
                 .senderLocation(trx.getSenderLocation())
+                .recipientAccountNumber(trx.getRecipientAccountNumber())
+                .recipientBank(bankService.getBankByCode(trx.getRecipientBankCode()))
 
                 // default values when making a transaction
-                .transactionStatus(TransactionStatus.PENDING)
-                .transactionDate(LocalDateTime.now());
+                .transactionDate(LocalDateTime.now()).build();
 
-        if (trx.getRecipientAccountNumber() != null && trx.getRecipientBankCode() != null) {
-            transaction.recipientAccountNumber(trx.getRecipientAccountNumber())
-                    .recipientBank(bankService.getBankByCode(trx.getRecipientBankCode()));
-        }
-
-
-
-        Transaction savedTransaction = transactionRepository.save(transaction.build());
+        Transaction savedTransaction = transactionRepository.save(transaction);
 
         log.info("[INFO] Transaction saved with ID: {}", savedTransaction.getId());
         transactionProducer.sendTransaction(savedTransaction);
@@ -93,14 +96,14 @@ public class TransactionService {
     }
 
     @Transactional
-    public double calculateRiskScore(Transaction trx){
+    public void calculateRiskScore(Transaction trx){
         double riskScore = 0.0;
         String accountKey = trx.getSenderAccountNumber();
         String rateKey = redisKey(accountKey, "rate");
         String locationKey = redisKey(accountKey, "lastKnownLocation");
         String timestampKey = redisKey(accountKey, "timestamp");
 
-        // check if the amount is graeter than 50K
+        // check if the amount is greater than 50K
         if (trx.getAmount().doubleValue() >= 100_000) riskScore += 0.2;
         else if (trx.getAmount().doubleValue() >= 50_000) riskScore += 0.1;
 
@@ -135,28 +138,39 @@ public class TransactionService {
 
         redisTemplate.opsForValue().set(locationKey, trx.getSenderLocation());
         redisTemplate.opsForValue().set(timestampKey, String.valueOf(getCurrentTimeStamp_Millis()));
-        return updateRiskScore(trx.getId(), riskScore);
+        updateRiskScore(trx, riskScore);
     }
 
 
-    // ONLY CALLS WHEN COMPLETED TRANSACTION AUTO SAVES IN DB
     @Transactional
-    public double updateRiskScore(UUID tsxId, double score){
-        // round the ccore to near value 0.600001 -> 0.6
-        score = Math.round(score * 10.0) / 10.0;
+    public void updateRiskScore(Transaction trx, double score){
+        if (riskManagmentRepository.existsByTransaction_Id(trx.getId())) {
+            log.info("[INFO] Risk score already exists for Transaction with ID: {}", trx.getId());
+            return;
+        }
 
-        Transaction tsx = getTransactionById(tsxId);
-        tsx.setRiskScore(score);
+        try {
+            // round the ccore to near value 0.600001 -> 0.6
+            score = Math.round(score * 10.0) / 10.0;
 
-        if (score >= RISKSCORE_THRESHOLD) tsx.setTransactionStatus(TransactionStatus.FLAGGED);
-        else tsx.setTransactionStatus(TransactionStatus.COMPLETED);
+            TransactionStatus status = score >= RISKSCORE_THRESHOLD ? TransactionStatus.FLAGGED : TransactionStatus.COMPLETED;
 
-        // set the transaction as resolved 
-        tsx.setResolvedAt(LocalDateTime.now());
+            RiskManagement rm = RiskManagement.builder()
+                    .transaction(trx)
+                    .riskScore(score)
+                    .riskLevel(riskManagmentService.getLevel(score))
+                    .transactionStatus(status)
+                    .reason(score >= RISKSCORE_THRESHOLD ? "High risk transaction" : "Normal transaction")
+                    .createdAt(LocalDateTime.now()).build();
 
-        log.info("[INFO] Saved risk score for Transaction with ID: {}", tsxId);
+            RiskManagement savedRisk = riskManagmentRepository.save(rm);
 
-        return tsx.getRiskScore();
+            log.info("[INFO] SUCCESS RISK SAVE");
+            log.info("[INFO] Risk Score for Transaction Id: {} -> {}, Level: {}", trx.getId(), savedRisk.getRiskScore(), savedRisk.getRiskLevel());
+        }
+        catch (DataIntegrityViolationException e) {
+            log.info("[INFO] FOUND DUPLICATE RISK MANAGEMENT FOR TRANSACTION ID: {}", trx.getId(), e);
+        }
     }
 
     private Long getCurrentTimeStamp_Millis(){
