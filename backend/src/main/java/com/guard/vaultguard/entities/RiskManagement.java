@@ -12,6 +12,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
 @Entity(name = "risk_management")
 public class RiskManagement {
 
@@ -20,6 +21,7 @@ public class RiskManagement {
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
+    @ToString.Exclude
     @JoinColumn(name = "transaction_id", unique = true, nullable = false)
     private Transaction transaction;
 
@@ -40,15 +42,4 @@ public class RiskManagement {
     @Column(name="created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    public String toString() {
-        return "RiskManagement{" +
-                "id=" + id +
-                ", transaction=" + transaction +
-                ", riskScore=" + riskScore +
-                ", riskLevel=" + riskLevel +
-                ", transactionStatus=" + transactionStatus +
-                ", reason='" + reason + '\'' +
-                ", createdAt=" + createdAt +
-                '}';
-    }
 }

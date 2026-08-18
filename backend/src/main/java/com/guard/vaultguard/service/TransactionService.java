@@ -6,28 +6,26 @@ import com.guard.vaultguard.entities.RiskManagement;
 import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
+import com.guard.vaultguard.exceptions.DuplicateTransactionException;
 import com.guard.vaultguard.exceptions.IllegalTransactionException;
 import com.guard.vaultguard.kafka.TransactionProducer;
 import com.guard.vaultguard.repositories.RiskManagmentRepository;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.guard.vaultguard.config.Constants.RISKSCORE_THRESHOLD;
 import static com.guard.vaultguard.config.Constants.MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS;
-import static com.guard.vaultguard.config.Constants.MIN_TIME_DIFF_LOCATION_CHANGE_SECONDS;
 
 @Service
 @Slf4j
@@ -57,6 +55,7 @@ public class TransactionService {
     @Transactional
     public Transaction processTransaction(TransactionRequest trx){
         if (!validateTransaction(trx)) throw new IllegalTransactionException("Invalid transaction data");
+        if (!checkDuplicateTransaction(trx)) throw new DuplicateTransactionException("Duplicate transaction detected");
 
         Transaction transaction = Transaction.builder()
                 .senderAccountNumber(trx.getSenderAccountNumber())
@@ -127,12 +126,7 @@ public class TransactionService {
 
                 // if the location changes within 2-5 mins (Country based in this version later Ill see on Lat and Long)
                 long timeDiff = (getCurrentTimeStamp_Millis() - timeStampLocation) / 1000;
-                if (
-                        timeDiff >= MIN_TIME_DIFF_LOCATION_CHANGE_SECONDS &&
-                                timeDiff <= MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS
-                ) {
-                    riskScore += 0.3;
-                }
+                if ( timeDiff <= MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS) {riskScore += 0.3;}
             }
         }
 
@@ -140,7 +134,6 @@ public class TransactionService {
         redisTemplate.opsForValue().set(timestampKey, String.valueOf(getCurrentTimeStamp_Millis()));
         updateRiskScore(trx, riskScore);
     }
-
 
     @Transactional
     public void updateRiskScore(Transaction trx, double score){
@@ -171,6 +164,24 @@ public class TransactionService {
         catch (DataIntegrityViolationException e) {
             log.info("[INFO] FOUND DUPLICATE RISK MANAGEMENT FOR TRANSACTION ID: {}", trx.getId(), e);
         }
+    }
+
+    private boolean checkDuplicateTransaction(TransactionRequest trxReq) {
+        // transaciton amount to be rounded to 2 decimal places for the key
+        String transactionAmount = trxReq.getAmount().setScale(2, RoundingMode.HALF_UP).toPlainString();
+
+        // MAKE THE KEY -> idempotency:{senderAccountNumber}:{recipientAccountNumber}:{amount}
+        String transactionKey = "idempotency:" + trxReq.getSenderAccountNumber()
+                                + ":" + trxReq.getRecipientAccountNumber()
+                                + ":" + transactionAmount;
+
+        String requestId = "req_" + UUID.randomUUID();
+        Boolean isDuplicate = redisTemplate.opsForValue().setIfAbsent(transactionKey, requestId, 2, TimeUnit.MINUTES);
+
+        // TURE -> key is created Successfully, meaning no duplicate transaction
+        // FALSE -> key already exists, meaning duplicate transaction
+        // if null -> operation failed, treat as not duplicate
+        return isDuplicate != null && isDuplicate;
     }
 
     private Long getCurrentTimeStamp_Millis(){

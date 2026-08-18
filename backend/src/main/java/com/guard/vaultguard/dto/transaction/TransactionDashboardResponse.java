@@ -42,12 +42,12 @@ public class TransactionDashboardResponse {
         return TransactionDashboardResponse.builder()
                 .transactionId(trx.getId())
                 .senderAccountNumber(trx.getSenderAccountNumber())
-                .senderBank(trx.getSenderBank() != null ? trx.getSenderBank().getBankName() : null)
+                .senderBank(trx.getSenderBank().getBankName())
                 .transactionAmount(trx.getAmount())
                 .transactionDate(trx.getTransactionDate())
                 .senderLocation(trx.getSenderLocation())
                 .transactionType(trx.getTransactionType())
-                .recipientAccountNumber(trx.getRecipientAccountNumber() != null ? trx.getRecipientAccountNumber() : null)
+                .recipientAccountNumber(trx.getRecipientAccountNumber())
                 .recipientBank(trx.getRecipientBank() != null ? trx.getRecipientBank().getBankName() : null)
 
                 // risk management
@@ -55,6 +55,7 @@ public class TransactionDashboardResponse {
                 .riskScore(trxRiskManagement.getRiskScore())
                 .reason(trxRiskManagement.getReason())
                 .createdDate(trxRiskManagement.getCreatedAt())
+                .transactionStatus(trxRiskManagement.getTransactionStatus())
                 .build();
     }
 

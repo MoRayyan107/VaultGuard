@@ -40,17 +40,16 @@ public class ProcessTrxResponse {
                 .build();
     }
 
-    public static ProcessTrxResponse failure(Transaction trx, String message){
+    public static ProcessTrxResponse failure(TransactionRequest trxReq, String message){
         return ProcessTrxResponse.builder()
-                .transactionId(trx.getId())
                 .status(TransactionStatus.FAILED)
                 .message(message)
-                .transactionDate(trx.getTransactionDate())
-                .transactionAmount(trx.getAmount())
-                .senderAccountNumber(trx.getSenderAccountNumber())
-                .recipientAccountNumber(trx.getRecipientAccountNumber() != null ? trx.getRecipientAccountNumber() : null)
-                .senderBank(trx.getSenderBank().getBankName())
-                .recipientBank(trx.getRecipientBank() != null ? trx.getRecipientBank().getBankName() : null)
+                .transactionDate(LocalDateTime.parse(LocalDateTime.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)))
+                .transactionAmount(trxReq.getAmount())
+                .senderAccountNumber(trxReq.getSenderAccountNumber())
+                .recipientAccountNumber(trxReq.getRecipientAccountNumber())
+                .senderBank(trxReq.getSenderBankCode())
+                .recipientBank(trxReq.getRecipientBankCode())
                 .build();
     }
 }

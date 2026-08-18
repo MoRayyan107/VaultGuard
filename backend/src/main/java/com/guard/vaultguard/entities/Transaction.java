@@ -17,6 +17,7 @@ import lombok.*;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 @Builder
 public class Transaction {
     @Id
@@ -53,19 +54,4 @@ public class Transaction {
 
     @Column(nullable = false)
     private LocalDateTime transactionDate;
-
-    public String toString() {
-        return "Transaction{" +
-                "id=" + id +
-                ", senderAccountNumber='" + senderAccountNumber + '\'' +
-                ", senderBank=" + (senderBank != null ? senderBank.getBankCode() : null) +
-                ", senderLocation='" + senderLocation + '\'' +
-                ", amount=" + amount +
-                ", riskManagement=" + (riskManagement != null ? riskManagement.toString() : null) +
-                ", recipientAccountNumber='" + recipientAccountNumber + '\'' +
-                ", recipientBank=" + (recipientBank != null ? recipientBank.getBankCode() : null) +
-                ", transactionType=" + transactionType +
-                ", transactionDate=" + transactionDate +
-                '}';
-    }
 }

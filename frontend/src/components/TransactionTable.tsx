@@ -27,6 +27,8 @@ function TransactionTable({title, transaction, error, loading, emptyMsg}: Transa
                             <th>Type</th>
                             <th>Status</th>
                             <th>Risk Score</th>
+                            <th>Risk level</th>
+                            <th>Created At</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -44,6 +46,10 @@ function TransactionTable({title, transaction, error, loading, emptyMsg}: Transa
                                 <td style={{ color: t.riskScore && t.riskScore >= 0.7 ? 'indianred' : 'darkseagreen' }}>
                                     {t.riskScore ?? "N/A"}
                                 </td>
+                                <td style={{ color: t.riskLevel === 'HIGH' ? 'indianred' : t.riskLevel === 'MEDIUM' ? 'orange' : 'darkseagreen' }}>
+                                    {t.riskLevel}
+                                </td>
+                                <td>{t.createdAt}</td>
                             </tr>
                         ))}
                     </tbody>

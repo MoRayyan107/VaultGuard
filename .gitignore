@@ -38,7 +38,7 @@ backend/.env.docker
 frontend/.env
 Notes
 InserQueriesTestingOnly
-**/secrets/
+payload.json
 
 # Redis Dump
 dump.rdb

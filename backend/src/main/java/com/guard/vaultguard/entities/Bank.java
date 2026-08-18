@@ -1,10 +1,7 @@
 package com.guard.vaultguard.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.UUID;
 
@@ -12,6 +9,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Data
 @Builder
+@ToString
 @Entity
 public class Bank {
 
@@ -30,12 +28,4 @@ public class Bank {
     @Column(nullable = false)
     private boolean active;
 
-    public String toString(){
-        return "Bank{" +
-                "bankId=" + bankId +
-                ", bankName='" + bankName + '\'' +
-                ", bankCode='" + bankCode + '\'' +
-                ", active=" + active +
-                '}';
-    }
 }

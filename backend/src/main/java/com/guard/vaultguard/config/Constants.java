@@ -15,7 +15,6 @@ public final class Constants {
     };
 
     // Service
-    public final static Integer MIN_TIME_DIFF_LOCATION_CHANGE_SECONDS = 120;
     public final static Integer MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS = 300;
     public final static Double RISKSCORE_THRESHOLD = 0.7;
 

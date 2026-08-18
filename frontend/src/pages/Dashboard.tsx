@@ -1,7 +1,7 @@
-import {useEffect, useState} from "react";
+import {useEffect, useState, useMemo} from "react";
 import {useTransactions} from "../context/TransactionContext.tsx";
 import TransactionTable from "../components/TransactionTable.tsx";
-import type {Transaction} from "../types/Transaction.ts";
+import type {Transaction} from "../types/transaction";
 
 function Dashboard() {
     const {transactions, transactionError, transactionLoading, fetchTransactions} =  useTransactions();
@@ -15,6 +15,14 @@ function Dashboard() {
     useEffect(() => {
         fetchTransactions();
     }, [fetchTransactions]);
+
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            if (typeFilter !== "ALL" && t.transactionType !== typeFilter) return false;
+            if (statusFilter !== "ALL" && t.transactionStatus !== statusFilter) return false;
+            return true;
+        });
+    }, [transactions, typeFilter, statusFilter]);
 
     return (
         <div>
@@ -30,10 +38,21 @@ function Dashboard() {
                 <option value="TRANSFER">Transfer</option>
             </select>
 
+            <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as dashBoardFilterStatus | "ALL")}
+            >
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="COMPLETED">COMPLETED</option>
+                <option value="FAILED">FAILED</option>
+                <option value="FLAGGED">FLAGGED</option>
+            </select>
+
             <TransactionTable title="All Transactions"
-                            transaction={transactions}
-                            error={transactionError}
-                            loading={transactionLoading}
+                              transaction={filteredTransactions}
+                              error={transactionError}
+                              loading={transactionLoading}
             />
         </div>
     );

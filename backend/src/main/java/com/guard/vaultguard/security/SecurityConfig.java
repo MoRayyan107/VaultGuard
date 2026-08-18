@@ -67,6 +67,7 @@ public class SecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(requestHandler)
                         .ignoringRequestMatchers(PUBLIC_ENDPOINTS))
+//                .csrf(csrf -> csrf.disable()) // for now disable csrf, will enable later once FE is implemented or any microservices are calling this API
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // for now disable cors, will enable later oncce FE is implemented or any microservices are calling this API
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll()

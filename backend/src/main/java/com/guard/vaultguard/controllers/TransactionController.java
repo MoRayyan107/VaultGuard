@@ -5,6 +5,7 @@ import com.guard.vaultguard.dto.transaction.TransactionDashboardResponse;
 import com.guard.vaultguard.dto.transaction.TransactionRequest;
 import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.exceptions.BankCodeNotFoundException;
+import com.guard.vaultguard.exceptions.DuplicateTransactionException;
 import com.guard.vaultguard.exceptions.IllegalTransactionException;
 import com.guard.vaultguard.service.TransactionService;
 import jakarta.validation.Valid;
@@ -42,10 +43,13 @@ public class TransactionController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(trxResponse);
         }
-        catch (IllegalTransactionException | BankCodeNotFoundException e) {
-            assert trx  != null;
+        catch (IllegalTransactionException | BankCodeNotFoundException  e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ProcessTrxResponse.failure(trx, e.getMessage()));
+                    .body(ProcessTrxResponse.failure(trxReq, e.getMessage()));
+        }
+        catch (DuplicateTransactionException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ProcessTrxResponse.failure(trxReq, e.getMessage()));
         }
     }
 

@@ -52,6 +52,14 @@ public class GlobalExceptions {
         return new ResponseEntity<>(map, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(value = DuplicateTransactionException.class)
+    public ResponseEntity<Map<String,Object>> handleDuplicateTransactionException(DuplicateTransactionException ex){
+        Map<String, Object> map =
+                buildErrorResponse(HttpStatus.CONFLICT, ex, "Duplicate Transaction");
+
+        return new ResponseEntity<>(map, HttpStatus.CONFLICT);
+    }
+
     private Map<String, Object> buildErrorResponse(HttpStatus status, Exception ex, String issue) {
         Map<String, Object> map = new HashMap<>();
         map.put("message", ex.getMessage());
