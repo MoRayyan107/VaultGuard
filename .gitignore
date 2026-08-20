@@ -1,4 +1,3 @@
-HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -36,7 +35,7 @@ build/
 backend/.env
 backend/.env.docker
 frontend/.env
-Notes
+Notes.md
 InserQueriesTestingOnly
 payload.json
 

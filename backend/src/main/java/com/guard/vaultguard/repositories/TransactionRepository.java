@@ -28,6 +28,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     @Query("SELECT t FROM transactions t JOIN risk_management rm ON t.id = rm.transaction.id")
     List<Transaction> findAll();
 
+    Optional<Transaction> findByTransactionReference(String transactionReference);
+
     Optional<Transaction> findById(@NonNull UUID id);
 
 }

@@ -20,6 +20,8 @@ import lombok.*;
 @ToString
 @Builder
 public class Transaction {
+
+    // UUID for VaultGuard reference, not the bank transaction ID
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -34,6 +36,10 @@ public class Transaction {
 
     @Column(nullable = false)
     private String senderLocation;
+
+    // like an idempotency key, unique for each transaction to avoid duplicates
+    @Column(nullable =false, unique = true)
+    private String transactionReference;
 
     @Column(nullable = false)
     private BigDecimal amount;

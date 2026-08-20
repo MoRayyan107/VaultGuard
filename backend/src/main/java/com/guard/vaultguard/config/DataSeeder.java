@@ -67,7 +67,8 @@ public class DataSeeder {
             BigDecimal amount,
             String recipientAccountNumber, String recipientBankCode,
             TransactionType type, TransactionStatus status,
-            int daysAgo, Double riskScore, RiskLevel riskLevel
+            int daysAgo, Double riskScore, RiskLevel riskLevel,
+            String transactionReference
     ) {}
 
     // add the users into a array
@@ -85,15 +86,15 @@ public class DataSeeder {
     };
 
     SeedTransaction[] transactionsToSeed = {
-            new SeedTransaction("ACC10001", "SCOTBANK", "Glasgow, UK", new BigDecimal("250.00"), "ACC20001", "HSBCUK", TransactionType.TRANSFER, TransactionStatus.COMPLETED, 9, 0.1, RiskLevel.LOW),
-            new SeedTransaction("ACC10002", "HSBCUK", "London, UK", new BigDecimal("75.50"), "ACC20002", "SCOTBANK", TransactionType.DEPOSIT, TransactionStatus.COMPLETED, 8, 0.2, RiskLevel.LOW),
-            new SeedTransaction("ACC10003", "SCOTBANK", "Bengaluru, IN", new BigDecimal("1200.00"), null, null, TransactionType.WITHDRAW, TransactionStatus.COMPLETED, 7, 0.3, RiskLevel.LOW),
-            new SeedTransaction("ACC10004", "EMIRATESNBD", "Karachi, PK", new BigDecimal("630.75"), "ACC20004", "HSBCUK", TransactionType.WITHDRAW, TransactionStatus.FAILED, 6, 0.4, RiskLevel.MEDIUM),
-            new SeedTransaction("ACC10005", "SCOTBANK", "Manchester, UK", new BigDecimal("42.00"), null, null, TransactionType.DEPOSIT, TransactionStatus.PENDING, 5, 0.5, RiskLevel.MEDIUM),
-            new SeedTransaction("ACC10006", "HSBCUK", "Edinburgh, UK", new BigDecimal("88.20"), null, null, TransactionType.WITHDRAW, TransactionStatus.PENDING, 4, 0.6, RiskLevel.MEDIUM),
-            new SeedTransaction("ACC10007", "EMIRATESNBD", "Dubai, UAE", new BigDecimal("5000.00"), "ACC20007", "SCOTBANK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 3, 0.7, RiskLevel.HIGH),
-            new SeedTransaction("ACC10008", "LEGACYTRUST", "Lagos, NG", new BigDecimal("9800.00"), "ACC20008", "HSBCUK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 2, 0.8, RiskLevel.HIGH),
-            new SeedTransaction("ACC10009", "EMIRATESNBD", "Dubai, UAE", new BigDecimal("15000.00"), "ACC20009", "SCOTBANK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 1, 0.9, RiskLevel.HIGH)
+            new SeedTransaction("ACC10001", "SCOTBANK", "Glasgow, UK", new BigDecimal("250.00"), "ACC20001", "HSBCUK", TransactionType.TRANSFER, TransactionStatus.COMPLETED, 9, 0.1, RiskLevel.LOW, "SCOTBANK-REF-0001"),
+            new SeedTransaction("ACC10002", "HSBCUK", "London, UK", new BigDecimal("75.50"), "ACC20002", "SCOTBANK", TransactionType.DEPOSIT, TransactionStatus.COMPLETED, 8, 0.2, RiskLevel.LOW, "HSBCUK-REF-0002"),
+            new SeedTransaction("ACC10003", "SCOTBANK", "Bengaluru, IN", new BigDecimal("1200.00"), null, null, TransactionType.WITHDRAW, TransactionStatus.COMPLETED, 7, 0.3, RiskLevel.LOW, "SCOTBANK-REF-0003"),
+            new SeedTransaction("ACC10004", "EMIRATESNBD", "Karachi, PK", new BigDecimal("630.75"), "ACC20004", "HSBCUK", TransactionType.WITHDRAW, TransactionStatus.FAILED, 6, 0.4, RiskLevel.MEDIUM, "EMIRATESNBD-REF-0004"),
+            new SeedTransaction("ACC10005", "SCOTBANK", "Manchester, UK", new BigDecimal("42.00"), null, null, TransactionType.DEPOSIT, TransactionStatus.PENDING, 5, 0.5, RiskLevel.MEDIUM, "SCOTBANK-REF-0005"),
+            new SeedTransaction("ACC10006", "HSBCUK", "Edinburgh, UK", new BigDecimal("88.20"), null, null, TransactionType.WITHDRAW, TransactionStatus.PENDING, 4, 0.6, RiskLevel.MEDIUM, "HSBCUK-REF-0006"),
+            new SeedTransaction("ACC10007", "EMIRATESNBD", "Dubai, UAE", new BigDecimal("5000.00"), "ACC20007", "SCOTBANK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 3, 0.7, RiskLevel.HIGH, "EMIRATESNBD-REF-0007"),
+            new SeedTransaction("ACC10008", "LEGACYTRUST", "Lagos, NG", new BigDecimal("9800.00"), "ACC20008", "HSBCUK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 2, 0.8, RiskLevel.HIGH, "LEGACYTRUST-REF-0008"),
+            new SeedTransaction("ACC10009", "EMIRATESNBD", "Dubai, UAE", new BigDecimal("15000.00"), "ACC20009", "SCOTBANK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 1, 0.9, RiskLevel.HIGH, "EMIRATESNBD-REF-0009")
     };
 
     private final List<Transaction> seededTransactions = new ArrayList<>();
@@ -160,6 +161,7 @@ public class DataSeeder {
                             .senderAccountNumber(t.senderAccountNumber())
                             .senderBank(bankMap.get(t.senderBankCode()))
                             .senderLocation(t.senderLocation())
+                            .transactionReference(t.transactionReference())
                             .amount(t.amount())
                             .recipientAccountNumber(t.recipientAccountNumber())
                             .recipientBank(t.recipientBankCode() != null ? bankMap.get(t.recipientBankCode()) : null)
@@ -239,14 +241,14 @@ public class DataSeeder {
             // 4. Build Footer
             logBuilder.append(CYAN+"========================================================"+RESET + '\n')
                     .append(GREEN + BOLD+ "[VaultGuard] User Seeding Flow Complete!" + RESET + '\n')
-                    .append(GREEN + "Total Users         : " + totalUsers + '\n')
-                    .append(GREEN + "Banks Seeded        : " + totalBanks + '\n')
-                    .append(GREEN + "Transactions Seeded : " + totalTransactions + '\n')
-                    .append(GREEN + "Time Taken          : " + duration + "ms" + RESET + '\n')
+                    .append(GREEN).append("Total Users         : ").append(totalUsers).append('\n')
+                    .append(GREEN).append("Banks Seeded        : ").append(totalBanks).append('\n')
+                    .append(GREEN).append("Transactions Seeded : ").append(totalTransactions).append('\n')
+                    .append(GREEN).append("Time Taken          : ").append(duration).append("ms").append(RESET).append('\n')
                     .append(CYAN + "========================================================" + RESET);
 
             /// after all that put the log
-            log.info("{}", logBuilder.toString());
+            log.info("{}", logBuilder);
         };
     }
 
@@ -261,7 +263,7 @@ public class DataSeeder {
             userRepository.findByUsername(USERNAME_3).ifPresent(userRepository::delete);
         } catch (Exception e) {
             hasErrors = true;
-            logBuilder.append(YELLOW + "Error removing seeded data: " + e.getMessage() + RESET + '\n');
+            logBuilder.append(YELLOW).append("Error removing seeded data: ").append(e.getMessage()).append(RESET).append('\n');
         }
 
         // RiskManagement must be deleted BEFORE Transaction — transaction_id FK is
@@ -272,14 +274,14 @@ public class DataSeeder {
             riskManagmentRepository.deleteAll(seededRiskManagement);
         } catch (Exception e) {
             hasErrors = true;
-            logBuilder.append(YELLOW + "Error removing seeded risk management: " + e.getMessage() + RESET + '\n');
+            logBuilder.append(YELLOW).append("Error removing seeded risk management: ").append(e.getMessage()).append(RESET).append('\n');
         }
 
         try {
             transactionRepository.deleteAll(seededTransactions);
         } catch (Exception e) {
             hasErrors = true;
-            logBuilder.append(YELLOW + "Error removing seeded transactions: " + e.getMessage() + RESET + '\n');
+            logBuilder.append(YELLOW).append("Error removing seeded transactions: ").append(e.getMessage()).append(RESET).append('\n');
         }
 
 
@@ -289,7 +291,7 @@ public class DataSeeder {
             }
         } catch (Exception e) {
             hasErrors = true;
-            logBuilder.append(YELLOW + "Error removing seeded banks: " + e.getMessage() + RESET + '\n');
+            logBuilder.append(YELLOW).append("Error removing seeded banks: ").append(e.getMessage()).append(RESET).append('\n');
         }
 
         // Build the teardown banner as one string block
@@ -307,6 +309,6 @@ public class DataSeeder {
         logBuilder.append(RED + "========================================================" + RESET);
 
         // Output as ONE single log statement when CTRL+C is hit
-        log.info("{}", logBuilder.toString());
+        log.info("{}", logBuilder);
     }
 }

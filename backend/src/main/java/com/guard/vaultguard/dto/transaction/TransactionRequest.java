@@ -19,6 +19,10 @@ public class TransactionRequest {
     @NotBlank
     private String senderBankCode;
 
+    // sender bank reference acting for idempotency key (always unique)
+    @NotBlank
+    private String bankTrxReference;
+
     private String recipientAccountNumber;
 
     private String recipientBankCode;

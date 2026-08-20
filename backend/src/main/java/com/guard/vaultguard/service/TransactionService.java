@@ -65,16 +65,25 @@ public class TransactionService {
                 .senderLocation(trx.getSenderLocation())
                 .recipientAccountNumber(trx.getRecipientAccountNumber())
                 .recipientBank(bankService.getBankByCode(trx.getRecipientBankCode()))
+                .transactionReference(trx.getBankTrxReference())
 
                 // default values when making a transaction
                 .transactionDate(LocalDateTime.now()).build();
 
-        Transaction savedTransaction = transactionRepository.save(transaction);
+        try {
+            Transaction savedTransaction = transactionRepository.save(transaction);
 
-        log.info("[INFO] Transaction saved with ID: {}", savedTransaction.getId());
-        transactionProducer.sendTransaction(savedTransaction);
+            log.info("[INFO] Transaction saved with ID: {}", savedTransaction.getId());
+            transactionProducer.sendTransaction(savedTransaction);
 
-        return savedTransaction;
+            return savedTransaction;
+        }
+        catch (DataIntegrityViolationException e) {
+            // return the data  DB
+            log.info("[INFO] Duplicate transaction detected for reference: {}", trx.getBankTrxReference(), e);
+            return transactionRepository.findByTransactionReference(trx.getBankTrxReference())
+                    .orElseThrow(() -> new IllegalTransactionException("Duplicate transaction detected but not found in DB"));
+        }
     }
 
     public List<Transaction> getFlaggedTransactions(){
@@ -167,20 +176,16 @@ public class TransactionService {
     }
 
     private boolean checkDuplicateTransaction(TransactionRequest trxReq) {
-        // transaciton amount to be rounded to 2 decimal places for the key
-        String transactionAmount = trxReq.getAmount().setScale(2, RoundingMode.HALF_UP).toPlainString();
+        // old way make a key with sender and receiver acc number and amount,
+        // but this doesnt solve multi-bank transactions and can break,
+        // also to pretect from duploicates we can use the bankTrxReference as a unique key for each transaction
 
-        // MAKE THE KEY -> idempotency:{senderAccountNumber}:{recipientAccountNumber}:{amount}
-        String transactionKey = "idempotency:" + trxReq.getSenderAccountNumber()
-                                + ":" + trxReq.getRecipientAccountNumber()
-                                + ":" + transactionAmount;
+        // since each transaction from bank has a unique reference, we can use that as a key to check for duplicates
+        String redisKey = "idempotency:" + trxReq.getSenderBankCode() + ":" + trxReq.getBankTrxReference();
+        String redisValue = UUID.randomUUID().toString();
 
-        String requestId = "req_" + UUID.randomUUID();
-        Boolean isDuplicate = redisTemplate.opsForValue().setIfAbsent(transactionKey, requestId, 2, TimeUnit.MINUTES);
+        Boolean isDuplicate = redisTemplate.opsForValue().setIfAbsent(redisKey, redisValue, 2, TimeUnit.MINUTES);
 
-        // TURE -> key is created Successfully, meaning no duplicate transaction
-        // FALSE -> key already exists, meaning duplicate transaction
-        // if null -> operation failed, treat as not duplicate
         return isDuplicate != null && isDuplicate;
     }
 
@@ -203,6 +208,8 @@ public class TransactionService {
         if (trx.getTransactionType() == TransactionType.TRANSFER) {
             if (trx.getRecipientAccountNumber() == null || trx.getRecipientAccountNumber().isEmpty()) return false;
         }
+
+        if (trx.getBankTrxReference() == null || trx.getBankTrxReference().isEmpty()) return false;
 
         if (trx.getAmount() == null || trx.getAmount().doubleValue() <= 0) return false;
 
