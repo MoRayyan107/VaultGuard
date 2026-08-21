@@ -4,6 +4,8 @@ import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import io.lettuce.core.dynamic.annotation.Param;
 import org.jspecify.annotations.NonNull;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -25,8 +27,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             "OR t.recipientBank.bankId = :bankId")
     List<Transaction> findAllByBankId(@Param("bankId") UUID bankId);
 
-    @Query("SELECT t FROM transactions t JOIN risk_management rm ON t.id = rm.transaction.id")
-    List<Transaction> findAll();
+    @Query("SELECT t FROM transactions t JOIN t.riskManagement rm")
+    Page<Transaction> findAll(Pageable pageable);
 
     Optional<Transaction> findByTransactionReference(String transactionReference);
 

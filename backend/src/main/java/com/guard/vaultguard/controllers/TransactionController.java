@@ -9,11 +9,13 @@ import com.guard.vaultguard.exceptions.DuplicateTransactionException;
 import com.guard.vaultguard.exceptions.IllegalTransactionException;
 import com.guard.vaultguard.service.TransactionService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,9 +38,8 @@ public class TransactionController {
             @Valid @RequestBody TransactionRequest trxReq
     )
     {
-        Transaction trx = null;
         try {
-            trx = transactionService.processTransaction(trxReq);
+            Transaction trx = transactionService.processTransaction(trxReq);
             ProcessTrxResponse trxResponse = ProcessTrxResponse.success(trx);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(trxResponse);
@@ -53,6 +54,7 @@ public class TransactionController {
         }
     }
 
+    // DEPRECATED: redundant endpoint — findAll transactions endpoint will cover flagged status id's etc. in future
     @PreAuthorize("hasAnyRole('"+ROLE_MANAGER+"','"+ROLE_ANALYST+"')")
     @GetMapping("/fetch/flaggedTransactions")
     public ResponseEntity<List<TransactionDashboardResponse>> getFlaggedTransactions(){
@@ -63,6 +65,7 @@ public class TransactionController {
         return ResponseEntity.ok(trxResponse);
     }
 
+    // DEPRECATED: redundant endpoint — high risk transactions are already covered by flagged transactions
     @PreAuthorize("hasAnyRole('"+ROLE_MANAGER+"','"+ROLE_ANALYST+"')")
     @GetMapping("/fetch/highRiskTransactions")
     public ResponseEntity<List<TransactionDashboardResponse>> getAllHighRiskTransactions(){
@@ -75,10 +78,10 @@ public class TransactionController {
 
     @PreAuthorize("hasAnyRole('"+ROLE_MANAGER+"','"+ROLE_ANALYST+"')")
     @GetMapping("/fetch/allTransactions")
-    public ResponseEntity<List<TransactionDashboardResponse>> getAllTransactions(){
-        List<Transaction> trxs = transactionService.getAllTransactions();
+    public ResponseEntity<Page<TransactionDashboardResponse>> getAllTransactions(Pageable pageable){
+        Page<Transaction> trxs = transactionService.getAllTransactions(pageable);
 
-        List<TransactionDashboardResponse> trxResponse = TransactionDashboardResponse.mapToResponse(trxs);
+        Page<TransactionDashboardResponse> trxResponse = TransactionDashboardResponse.mapToResponse(trxs);
 
         return ResponseEntity.ok(trxResponse);
     }

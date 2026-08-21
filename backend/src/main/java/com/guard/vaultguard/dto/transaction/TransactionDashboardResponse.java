@@ -7,6 +7,7 @@ import com.guard.vaultguard.entities.enums.RiskLevel;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
 import lombok.*;
+import org.springframework.data.domain.Page;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -59,9 +60,14 @@ public class TransactionDashboardResponse {
                 .build();
     }
 
+    // DEPRECATED: Removal of this method after removal of redundant mapping in TransactionService
     public static List<TransactionDashboardResponse> mapToResponse(List<Transaction> trx){
         return trx.stream()
                 .map(TransactionDashboardResponse::buildTransactionDashboardResponse)
                 .toList();
+    }
+
+    public static Page<TransactionDashboardResponse> mapToResponse(Page<Transaction> trx){
+        return trx.map(TransactionDashboardResponse::buildTransactionDashboardResponse);
     }
 }

@@ -14,10 +14,13 @@ import com.guard.vaultguard.repositories.TransactionRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.math.RoundingMode;
+import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -90,8 +93,16 @@ public class TransactionService {
         return transactionRepository.findByTransactionStatus(TransactionStatus.FLAGGED);
     }
 
-    public List<Transaction> getAllTransactions(){
-        return transactionRepository.findAll();
+    public Page<Transaction> getAllTransactions(Pageable pageable){
+
+        // create default sorting
+        if (pageable.getSort().isUnsorted()) {
+            Sort defaultSort = Sort.by(Sort.Direction.DESC, "transactionDate")
+                    .and(Sort.by(Sort.Direction.DESC, "id"));
+            pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), defaultSort);
+        }
+
+        return transactionRepository.findAll(pageable);
     }
 
     public Transaction getTransactionById(UUID tsxId){
