@@ -11,12 +11,14 @@ import com.guard.vaultguard.exceptions.IllegalTransactionException;
 import com.guard.vaultguard.kafka.TransactionProducer;
 import com.guard.vaultguard.repositories.RiskManagmentRepository;
 import com.guard.vaultguard.repositories.TransactionRepository;
+import com.guard.vaultguard.repositories.TransactionSpecification;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -93,7 +95,7 @@ public class TransactionService {
         return transactionRepository.findByTransactionStatus(TransactionStatus.FLAGGED);
     }
 
-    public Page<Transaction> getAllTransactions(Pageable pageable){
+    public Page<Transaction> getAllTransactions(UUID bankId, Pageable pageable){
 
         // create default sorting
         if (pageable.getSort().isUnsorted()) {
@@ -102,7 +104,8 @@ public class TransactionService {
             pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), defaultSort);
         }
 
-        return transactionRepository.findAll(pageable);
+        Specification<Transaction> bankIdSpec = TransactionSpecification.hasSenderBankId(bankId);
+        return transactionRepository.findAll(bankIdSpec, pageable);
     }
 
     public Transaction getTransactionById(UUID tsxId){

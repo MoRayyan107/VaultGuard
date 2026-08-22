@@ -16,6 +16,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -67,7 +68,7 @@ public class SecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(requestHandler)
                         .ignoringRequestMatchers(PUBLIC_ENDPOINTS))
-//                .csrf(csrf -> csrf.disable()) // for now disable csrf, will enable later once FE is implemented or any microservices are calling this API
+//                .csrf(AbstractHttpConfigurer::disable) // FOR TESTING IN POOSTMAN SINCE X-CSRF TOKEN IS NOT BEING ABLE TO SET
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // for now disable cors, will enable later oncce FE is implemented or any microservices are calling this API
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll()

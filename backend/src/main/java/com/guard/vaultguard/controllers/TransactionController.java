@@ -78,8 +78,11 @@ public class TransactionController {
 
     @PreAuthorize("hasAnyRole('"+ROLE_MANAGER+"','"+ROLE_ANALYST+"')")
     @GetMapping("/fetch/allTransactions")
-    public ResponseEntity<Page<TransactionDashboardResponse>> getAllTransactions(Pageable pageable){
-        Page<Transaction> trxs = transactionService.getAllTransactions(pageable);
+    public ResponseEntity<Page<TransactionDashboardResponse>> getAllTransactions(
+            @RequestParam(required = false) UUID senderBankId,
+            Pageable pageable)
+    {
+        Page<Transaction> trxs = transactionService.getAllTransactions(senderBankId, pageable);
 
         Page<TransactionDashboardResponse> trxResponse = TransactionDashboardResponse.mapToResponse(trxs);
 

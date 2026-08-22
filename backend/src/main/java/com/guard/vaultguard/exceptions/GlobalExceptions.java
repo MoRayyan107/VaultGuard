@@ -2,6 +2,7 @@ package com.guard.vaultguard.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -58,6 +59,14 @@ public class GlobalExceptions {
                 buildErrorResponse(HttpStatus.CONFLICT, ex, "Duplicate Transaction");
 
         return new ResponseEntity<>(map, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(value= MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex) {
+        Map<String, Object> map =
+                buildErrorResponse(HttpStatus.BAD_REQUEST, ex, "Invalid Argument Type");
+
+        return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
     }
 
     private Map<String, Object> buildErrorResponse(HttpStatus status, Exception ex, String issue) {

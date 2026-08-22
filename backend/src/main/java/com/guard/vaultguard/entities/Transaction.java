@@ -31,7 +31,7 @@ public class Transaction {
 
     // Fetch type lazy since we need evaluate the client bank to be active
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_bank_code", nullable = false)
+    @JoinColumn(name = "sender_bank_id", nullable = false)
     private Bank senderBank;
 
     @Column(nullable = false)
@@ -48,7 +48,7 @@ public class Transaction {
     private String recipientAccountNumber;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recipient_bank_code")
+    @JoinColumn(name = "recipient_bank_id")
     private Bank recipientBank;
 
     @OneToOne(mappedBy = "transaction",fetch = FetchType.LAZY)

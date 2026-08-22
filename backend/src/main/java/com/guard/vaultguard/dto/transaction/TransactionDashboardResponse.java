@@ -1,6 +1,5 @@
 package com.guard.vaultguard.dto.transaction;
 
-import com.guard.vaultguard.entities.Bank;
 import com.guard.vaultguard.entities.RiskManagement;
 import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.enums.RiskLevel;
