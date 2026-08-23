@@ -6,6 +6,7 @@ import com.guard.vaultguard.entities.RiskManagement;
 import com.guard.vaultguard.entities.Transaction;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
+import com.guard.vaultguard.exceptions.BankCodeNotFoundException;
 import com.guard.vaultguard.exceptions.DuplicateTransactionException;
 import com.guard.vaultguard.exceptions.IllegalTransactionException;
 import com.guard.vaultguard.kafka.TransactionProducer;
@@ -95,7 +96,8 @@ public class TransactionService {
         return transactionRepository.findByTransactionStatus(TransactionStatus.FLAGGED);
     }
 
-    public Page<Transaction> getAllTransactions(UUID bankId, Pageable pageable){
+    public Page<Transaction> getAllTransactions(String bankCode, Pageable pageable){
+        String normalisedBankCode = bankCode != null ? bankCode.trim().toUpperCase() : null;
 
         // create default sorting
         if (pageable.getSort().isUnsorted()) {
@@ -104,8 +106,16 @@ public class TransactionService {
             pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), defaultSort);
         }
 
-        Specification<Transaction> bankIdSpec = TransactionSpecification.hasSenderBankId(bankId);
-        return transactionRepository.findAll(bankIdSpec, pageable);
+        // Do the Specifications for dynamic queries
+        Specification<Transaction> specs = Specification.unrestricted();
+        // add unconditional spec to only return transactions that have been scored (i.e. have a risk score)
+        specs = specs.and(TransactionSpecification.isTransactionScored());
+
+        if (normalisedBankCode != null) {
+            specs = specs.and(TransactionSpecification.hasSenderBankCode(normalisedBankCode));
+        }
+
+        return transactionRepository.findAll(specs, pageable);
     }
 
     public Transaction getTransactionById(UUID tsxId){

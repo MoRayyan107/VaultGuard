@@ -24,13 +24,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     @Query("SELECT t FROM transactions t JOIN FETCH t.riskManagement rm WHERE rm.transactionStatus = :status")
     List<Transaction> findByTransactionStatus(@Param("status") TransactionStatus status);
 
-    @Query("SELECT t FROM transactions t JOIN FETCH t.riskManagement rm WHERE t.senderBank.bankId = :bankId " +
-            "OR t.recipientBank.bankId = :bankId")
-    List<Transaction> findAllByBankId(@Param("bankId") UUID bankId);
-
-    @Query("SELECT t FROM transactions t JOIN t.riskManagement rm")
-    Page<Transaction> findAll(Pageable pageable);
-
     Optional<Transaction> findByTransactionReference(String transactionReference);
 
     Optional<Transaction> findById(@NonNull UUID id);

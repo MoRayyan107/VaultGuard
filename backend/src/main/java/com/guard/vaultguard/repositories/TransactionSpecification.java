@@ -7,19 +7,26 @@ import com.guard.vaultguard.entities.Transaction_;
 import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.util.UUID;
-
 public class TransactionSpecification {
 
-    public static Specification<Transaction> hasSenderBankId(UUID senderBankId) {
+    public static Specification<Transaction> isTransactionScored() {
         return (root, criteriaQuery, criteriaBuilder) -> {
-            if (senderBankId == null) {
+
+            // join the transaction to riskManagement
+            root.join(Transaction_.riskManagement);
+            return criteriaBuilder.conjunction();
+        };
+    }
+
+    public static Specification<Transaction> hasSenderBankCode(String senderBankCode) {
+        return (root, criteriaQuery, criteriaBuilder) -> {
+            if (senderBankCode == null || senderBankCode.isEmpty()) {
                 return criteriaBuilder.conjunction(); // No filtering if senderBankId is null
             }
 
             // Join the Transaction entity with the Bank entity using the senderBank relationship
             Join<Transaction, Bank> joinedTrxWithBank = root.join(Transaction_.senderBank);
-            return criteriaBuilder.equal(joinedTrxWithBank.get(Bank_.bankId), senderBankId);
+            return criteriaBuilder.equal(joinedTrxWithBank.get(Bank_.bankCode), senderBankCode);
         };
     }
 }
