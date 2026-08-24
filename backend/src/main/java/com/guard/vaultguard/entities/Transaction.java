@@ -17,9 +17,11 @@ import lombok.*;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 @ToString
+@Builder
 public class Transaction {
+
+    // UUID for VaultGuard reference, not the bank transaction ID
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -27,8 +29,17 @@ public class Transaction {
     @Column(length = 100, nullable = false)
     private String senderAccountNumber;
 
+    // Fetch type lazy since we need evaluate the client bank to be active
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sender_bank_id", nullable = false)
+    private Bank senderBank;
+
     @Column(nullable = false)
     private String senderLocation;
+
+    // like an idempotency key, unique for each transaction to avoid duplicates
+    @Column(nullable =false, unique = true)
+    private String transactionReference;
 
     @Column(nullable = false)
     private BigDecimal amount;
@@ -36,20 +47,17 @@ public class Transaction {
     @Column(length = 100)
     private String recipientAccountNumber;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recipient_bank_id")
+    private Bank recipientBank;
+
+    @OneToOne(mappedBy = "transaction",fetch = FetchType.LAZY)
+    private RiskManagement riskManagement;
+
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private TransactionType transactionType;
 
     @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private TransactionStatus transactionStatus;
-
-    @Column(nullable = false)
     private LocalDateTime transactionDate;
-
-    @Column
-    private Double riskScore;
-
-    @Column
-    private LocalDateTime resolvedAt;
 }

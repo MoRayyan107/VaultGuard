@@ -8,11 +8,6 @@ interface TransactionContextType {
     transactionLoading: boolean;
     transactionError: string;
     fetchTransactions: (force?: boolean) => Promise<void>;
-
-    flaggedTransaction: Transaction[];
-    flaggedLoading: boolean;
-    flaggedError: string;
-    fetchTransactionFlagged: (force?: boolean) => Promise<void>;
 }
 
 const transactionContext = createContext<TransactionContextType | undefined>(undefined);
@@ -21,7 +16,6 @@ const REFRESH_RATE = 60000; // 60sec
 
 export function TransactionProvider({children}: {children: ReactNode}) {
     const allTransactions = useFetch<Transaction>("/api/v1/fraudDetect/fetch/allTransactions");
-    const flaggedTransactions = useFetch<Transaction>("/api/v1/fraudDetect/fetch/flaggedTransactions");
 
     return (
         <transactionContext.Provider value={{
@@ -29,11 +23,6 @@ export function TransactionProvider({children}: {children: ReactNode}) {
             transactionLoading: allTransactions.loading,
             transactionError: allTransactions.error,
             fetchTransactions: allTransactions.fetchData,
-
-            flaggedTransaction: flaggedTransactions.data,
-            flaggedLoading: flaggedTransactions.loading,
-            flaggedError: flaggedTransactions.error,
-            fetchTransactionFlagged: flaggedTransactions.fetchData
         }}>
             {children}
         </transactionContext.Provider>

@@ -67,6 +67,7 @@ public class SecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(requestHandler)
                         .ignoringRequestMatchers(PUBLIC_ENDPOINTS))
+//                .csrf(AbstractHttpConfigurer::disable) // FOR TESTING IN POOSTMAN SINCE X-CSRF TOKEN IS NOT BEING ABLE TO SET
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // for now disable cors, will enable later oncce FE is implemented or any microservices are calling this API
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll()

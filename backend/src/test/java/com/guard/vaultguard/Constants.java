@@ -9,8 +9,11 @@ public class Constants {
     }
 
     public static final String SENDER_ACCOUNT_NUMBER = "ACC-001";
-    public static final String RECEIVER_ACCOUNT_NUMBER = "ACC-002";
+    public static final String SENDER_BANK_CODE = "BK002";
     public static final String SENDER_LOCATION = "New York";
+
+    public static final String RECEIVER_ACCOUNT_NUMBER = "ACC-002";
+    public static final String RECEIVER_BANK_CODE = "BK001";
 
     public static final BigDecimal AMOUNT_GREATER_50_THOUSAND = BigDecimal.valueOf(50_001);
     public static final BigDecimal AMOUNT_GREATER_100_THOUSAND = BigDecimal.valueOf(100_001);

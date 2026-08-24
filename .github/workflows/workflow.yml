@@ -11,6 +11,8 @@ on:
       - master
       - "features/**"
       - "fixes/**"
+      - "feature/**"
+      - "fix/**"
   pull_request:
     branches:
       - main

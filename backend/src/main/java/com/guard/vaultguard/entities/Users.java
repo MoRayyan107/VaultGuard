@@ -37,6 +37,7 @@ public class Users {
                 ", userId=" + userId +
                 ", username='" + username + '\'' +
                 ", role=" + role +
+                ", email='" + email + '\'' +
                 '}';
     }
 }
