@@ -29,7 +29,7 @@ public class ProcessTrxResponse {
     public static ProcessTrxResponse success(Transaction trx){
         return ProcessTrxResponse.builder()
                 .transactionId(trx.getId())
-                .status(TransactionStatus.COMPLETED)
+                .status(trx.getRiskManagement().getTransactionStatus())
                 .message("Transaction completed successfully")
                 .transactionDate(trx.getTransactionDate())
                 .transactionAmount(trx.getAmount())

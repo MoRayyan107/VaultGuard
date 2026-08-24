@@ -17,13 +17,6 @@ import java.util.UUID;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, UUID>, JpaSpecificationExecutor<Transaction> {
-
-    @Query("SELECT t FROM transactions t JOIN FETCH t.riskManagement rm WHERE rm.riskScore >= :scoreThreshold")
-    List<Transaction> findByRiskScoreGreaterThan(@Param("scoreThreshold") double riskScoreThreshold);
-
-    @Query("SELECT t FROM transactions t JOIN FETCH t.riskManagement rm WHERE rm.transactionStatus = :status")
-    List<Transaction> findByTransactionStatus(@Param("status") TransactionStatus status);
-
     Optional<Transaction> findByTransactionReference(String transactionReference);
 
     Optional<Transaction> findById(@NonNull UUID id);

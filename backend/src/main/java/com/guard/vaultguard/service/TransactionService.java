@@ -4,11 +4,10 @@ import com.guard.vaultguard.dto.transaction.TransactionRequest;
 
 import com.guard.vaultguard.entities.RiskManagement;
 import com.guard.vaultguard.entities.Transaction;
+import com.guard.vaultguard.entities.enums.RiskLevel;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
-import com.guard.vaultguard.exceptions.BankCodeNotFoundException;
-import com.guard.vaultguard.exceptions.DuplicateTransactionException;
-import com.guard.vaultguard.exceptions.IllegalTransactionException;
+import com.guard.vaultguard.exceptions.*;
 import com.guard.vaultguard.kafka.TransactionProducer;
 import com.guard.vaultguard.repositories.RiskManagmentRepository;
 import com.guard.vaultguard.repositories.TransactionRepository;
@@ -26,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -92,16 +90,36 @@ public class TransactionService {
         }
     }
 
-    public List<Transaction> getFlaggedTransactions(){
-        return transactionRepository.findByTransactionStatus(TransactionStatus.FLAGGED);
-    }
-
-    public Page<Transaction> getAllTransactions(String bankCode, Pageable pageable){
+    public Page<Transaction> getAllTransactions(String bankCode, String status,
+                                                String riskLevel, Pageable pageable) {
         String normalisedBankCode = bankCode != null ? bankCode.trim().toUpperCase() : null;
+        String normalisedStatus = status != null ? status.trim().toUpperCase() : null;
+        String normalisedRiskLevel = riskLevel != null ? riskLevel.trim().toUpperCase() : null;
+
+        RiskLevel trxRiskLevel = null;
+        TransactionStatus trxStatus = null;
+
+        if (normalisedRiskLevel != null) {
+            try {
+                trxRiskLevel = RiskLevel.valueOf(normalisedRiskLevel);
+            } catch (IllegalArgumentException e) {
+                log.warn("[WARN] Invalid risk level provided: {}", normalisedRiskLevel);
+                throw new IllegalRiskLevelException("Invalid risk level: " + normalisedRiskLevel);
+            }
+        }
+
+        if (normalisedStatus != null) {
+            try {
+                trxStatus = TransactionStatus.valueOf(normalisedStatus);
+            } catch (IllegalArgumentException e) {
+                log.warn("[WARN] Invalid transaction status provided: {}", normalisedStatus);
+                throw new IllegalTransactionStatusException("Invalid transaction status: " + normalisedStatus);
+            }
+        }
 
         // create default sorting
         if (pageable.getSort().isUnsorted()) {
-            Sort defaultSort = Sort.by(Sort.Direction.DESC, "transactionDate")
+            Sort defaultSort = Sort.by(Sort.Direction.DESC, "transactionDate") // sort based on transactionDate
                     .and(Sort.by(Sort.Direction.DESC, "id"));
             pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), defaultSort);
         }
@@ -111,9 +129,12 @@ public class TransactionService {
         // add unconditional spec to only return transactions that have been scored (i.e. have a risk score)
         specs = specs.and(TransactionSpecification.isTransactionScored());
 
-        if (normalisedBankCode != null) {
+        if (normalisedBankCode != null)
             specs = specs.and(TransactionSpecification.hasSenderBankCode(normalisedBankCode));
-        }
+        if (trxStatus != null)
+            specs = specs.and(TransactionSpecification.hasTransactionStatus(trxStatus));
+        if (trxRiskLevel != null)
+            specs = specs.and(TransactionSpecification.hasTransactionRiskLevel(trxRiskLevel));
 
         return transactionRepository.findAll(specs, pageable);
     }
@@ -121,10 +142,6 @@ public class TransactionService {
     public Transaction getTransactionById(UUID tsxId){
         return transactionRepository.findById(tsxId)
                 .orElseThrow(() -> new IllegalTransactionException("Transaction with id " + tsxId + " not found"));
-    }
-
-    public List<Transaction> getAllHighRiskTransactions(){
-        return transactionRepository.findByRiskScoreGreaterThan(RISKSCORE_THRESHOLD);
     }
 
     @Transactional
@@ -221,7 +238,6 @@ public class TransactionService {
     private String redisKey(String accountNumber, String suffix) {
         return "transaction:" + accountNumber + ":" + suffix + ":";
     }
-
 
     private boolean validateTransaction(TransactionRequest trx){
         if (trx.getSenderAccountNumber() == null || trx.getSenderAccountNumber().isEmpty()) return false;

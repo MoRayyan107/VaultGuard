@@ -42,9 +42,8 @@ public class DataSeeder {
     private final String RED = "\u001B[31m";
     private final String BOLD = "\u001B[1m";
 
-    private static final String USERNAME_1 = "jake";
-    private static final String USERNAME_2 = "alex_analyst";
-    private static final String USERNAME_3 = "mitch_manager";
+    private static final String USERNAME_1 = "alex_analyst";
+    private static final String USERNAME_2 = "mitch_manager";
 
     private final UserRepository userRepository;
     private final BankRepository bankRepository;
@@ -71,11 +70,73 @@ public class DataSeeder {
             String transactionReference
     ) {}
 
+    private static SeedTransaction[] buildTransactionsToSeed() {
+        List<SeedTransaction> seeds = new ArrayList<>();
+        String[] senderBanks = {"SCOTBANK", "HSBCUK", "EMIRATESNBD", "LEGACYTRUST"};
+        String[] recipientBanks = {"HSBCUK", "SCOTBANK", "EMIRATESNBD", "LEGACYTRUST"};
+        String[] locations = {
+                "Glasgow, UK", "London, UK", "Bengaluru, IN", "Karachi, PK",
+                "Manchester, UK", "Edinburgh, UK", "Dubai, UAE", "Lagos, NG",
+                "Abu Dhabi, UAE", "Birmingham, UK", "Chennai, IN", "Islamabad, PK"
+        };
+
+        for (int i = 1; i <= 50; i++) {
+            String senderBankCode = senderBanks[(i - 1) % senderBanks.length];
+            TransactionType type = switch (i % 3) {
+                case 1 -> TransactionType.TRANSFER;
+                case 2 -> TransactionType.DEPOSIT;
+                default -> TransactionType.WITHDRAW;
+            };
+
+            TransactionStatus status = switch (i % 4) {
+                case 1 -> TransactionStatus.COMPLETED;
+                case 2 -> TransactionStatus.PENDING;
+                case 3 -> TransactionStatus.FAILED;
+                default -> TransactionStatus.FLAGGED;
+            };
+
+            RiskLevel riskLevel = switch (status) {
+                case COMPLETED -> RiskLevel.LOW;
+                case PENDING -> RiskLevel.MEDIUM;
+                case FAILED, FLAGGED -> RiskLevel.HIGH;
+            };
+
+            Double riskScore = switch (riskLevel) {
+                case LOW -> 0.15;
+                case MEDIUM -> 0.45;
+                case HIGH -> 0.85;
+            };
+
+            String recipientAccountNumber = type == TransactionType.TRANSFER ? String.format("ACC2%04d", i) : null;
+            String recipientBankCode = type == TransactionType.TRANSFER
+                    ? recipientBanks[(i + 1) % recipientBanks.length]
+                    : null;
+
+            BigDecimal amount = new BigDecimal(String.format("%d.%02d", 25 + ((i * 137) % 9750), (i * 17) % 100));
+
+            seeds.add(new SeedTransaction(
+                    String.format("ACC1%04d", i),
+                    senderBankCode,
+                    locations[(i - 1) % locations.length],
+                    amount,
+                    recipientAccountNumber,
+                    recipientBankCode,
+                    type,
+                    status,
+                    50 - i,
+                    riskScore,
+                    riskLevel,
+                    String.format("%s-REF-%04d", senderBankCode, i)
+            ));
+        }
+
+        return seeds.toArray(new SeedTransaction[0]);
+    }
+
     // add the users into a array
     String[][] usersToSeed = {
-            {UserRole.USER.name(), USERNAME_1, "ja@123", "jake@vaultguard.com"},
-            {UserRole.ANALYST.name(), USERNAME_2, "alex@123", "alex@vaultguard.com"},
-            {UserRole.MANAGER.name(), USERNAME_3, "mitch@123", "mitch@vaultguard.com"}
+            {UserRole.ANALYST.name(), USERNAME_1, "alex@123", "alex@vaultguard.com"},
+            {UserRole.MANAGER.name(), USERNAME_2, "mitch@123", "mitch@vaultguard.com"}
     };
 
     String[][] banksToSeed = {
@@ -85,17 +146,7 @@ public class DataSeeder {
             {"Legacy Trust Bank", "LEGACYTRUST", "false"}
     };
 
-    SeedTransaction[] transactionsToSeed = {
-            new SeedTransaction("ACC10001", "SCOTBANK", "Glasgow, UK", new BigDecimal("250.00"), "ACC20001", "HSBCUK", TransactionType.TRANSFER, TransactionStatus.COMPLETED, 9, 0.1, RiskLevel.LOW, "SCOTBANK-REF-0001"),
-            new SeedTransaction("ACC10002", "HSBCUK", "London, UK", new BigDecimal("75.50"), "ACC20002", "SCOTBANK", TransactionType.DEPOSIT, TransactionStatus.COMPLETED, 8, 0.2, RiskLevel.LOW, "HSBCUK-REF-0002"),
-            new SeedTransaction("ACC10003", "SCOTBANK", "Bengaluru, IN", new BigDecimal("1200.00"), null, null, TransactionType.WITHDRAW, TransactionStatus.COMPLETED, 7, 0.3, RiskLevel.LOW, "SCOTBANK-REF-0003"),
-            new SeedTransaction("ACC10004", "EMIRATESNBD", "Karachi, PK", new BigDecimal("630.75"), "ACC20004", "HSBCUK", TransactionType.WITHDRAW, TransactionStatus.FAILED, 6, 0.4, RiskLevel.MEDIUM, "EMIRATESNBD-REF-0004"),
-            new SeedTransaction("ACC10005", "SCOTBANK", "Manchester, UK", new BigDecimal("42.00"), null, null, TransactionType.DEPOSIT, TransactionStatus.PENDING, 5, 0.5, RiskLevel.MEDIUM, "SCOTBANK-REF-0005"),
-            new SeedTransaction("ACC10006", "HSBCUK", "Edinburgh, UK", new BigDecimal("88.20"), null, null, TransactionType.WITHDRAW, TransactionStatus.PENDING, 4, 0.6, RiskLevel.MEDIUM, "HSBCUK-REF-0006"),
-            new SeedTransaction("ACC10007", "EMIRATESNBD", "Dubai, UAE", new BigDecimal("5000.00"), "ACC20007", "SCOTBANK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 3, 0.7, RiskLevel.HIGH, "EMIRATESNBD-REF-0007"),
-            new SeedTransaction("ACC10008", "LEGACYTRUST", "Lagos, NG", new BigDecimal("9800.00"), "ACC20008", "HSBCUK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 2, 0.8, RiskLevel.HIGH, "LEGACYTRUST-REF-0008"),
-            new SeedTransaction("ACC10009", "EMIRATESNBD", "Dubai, UAE", new BigDecimal("15000.00"), "ACC20009", "SCOTBANK", TransactionType.TRANSFER, TransactionStatus.FLAGGED, 1, 0.9, RiskLevel.HIGH, "EMIRATESNBD-REF-0009")
-    };
+    SeedTransaction[] transactionsToSeed = buildTransactionsToSeed();
 
     private final List<Transaction> seededTransactions = new ArrayList<>();
     private final List<RiskManagement> seededRiskManagement = new ArrayList<>();
@@ -113,7 +164,7 @@ public class DataSeeder {
                     .append(CYAN + "========================================================" + RESET + '\n');
 
 
-            logBuilder.append(CYAN + "=========================== [BANKS] =============================" + RESET + '\n');
+            logBuilder.append(CYAN + "=========================== [SEEDING BANKS] =============================" + RESET + '\n');
             int totalBanks = 0;
             for (String[] bankData : banksToSeed) {
                 String bankName = bankData[0];
@@ -149,10 +200,11 @@ public class DataSeeder {
 
             /// ----------------------------------------------------------------------------------
             // seed the transactions + their risk management rows
-            logBuilder.append(CYAN + "=========================== [TRANSACTIONS] =============================" + RESET + '\n');
+            logBuilder.append(CYAN + "=========================== [SEEDING TRANSACTIONS] =============================" + RESET + '\n');
             int totalTransactions = 0;
+            boolean isTrxSeeded = false;
             for (SeedTransaction t : transactionsToSeed) {
-                boolean isSeeded = false;
+                isTrxSeeded = false;
 
                 try {
                     LocalDateTime txDate = LocalDateTime.now().minusDays(t.daysAgo());
@@ -184,22 +236,18 @@ public class DataSeeder {
                     seededRiskManagement.add(savedRisk);
 
                     totalTransactions++;
-                    isSeeded = true;
+                    isTrxSeeded = true;
                 } catch (Exception ignored) {
                     // Ignored — visualized via status column below
                 }
-
-                String status = isSeeded ? (GREEN + BOLD + "SEEDED" + RESET) : (RED + "SKIPPED" + RESET);
-                logBuilder.append(String.format("Txn: %s%-10s%s -> %-10s Amount: %s£%-10s Status: %s%n",
-                        CYAN, t.senderAccountNumber(), RESET,
-                        t.recipientAccountNumber() != null ? t.recipientAccountNumber() : "N/A",
-                        GREEN, t.amount(), status));
             }
+            String trxStatus = isTrxSeeded ? (GREEN + BOLD + "SEEDED" + RESET) : (RED + "SKIPPED" + RESET);
+            logBuilder.append(GREEN+"Transaction "+trxStatus + RESET + "\n");
 
 
             // -----------------------------------------------------------------------------------
             // register the users
-            logBuilder.append(CYAN + "=========================== [USERS] =============================" + RESET + '\n');
+            logBuilder.append(CYAN + "=========================== [SEEDING USERS] =============================" + RESET + '\n');
             int totalUsers = 0;
             for (String[] userData : usersToSeed) {
                 UserRole role = UserRole.valueOf(userData[0]);
@@ -260,7 +308,6 @@ public class DataSeeder {
         try {
             userRepository.findByUsername(USERNAME_1).ifPresent(userRepository::delete);
             userRepository.findByUsername(USERNAME_2).ifPresent(userRepository::delete);
-            userRepository.findByUsername(USERNAME_3).ifPresent(userRepository::delete);
         } catch (Exception e) {
             hasErrors = true;
             logBuilder.append(YELLOW).append("Error removing seeded data: ").append(e.getMessage()).append(RESET).append('\n');

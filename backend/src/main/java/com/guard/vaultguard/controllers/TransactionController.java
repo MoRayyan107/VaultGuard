@@ -54,35 +54,15 @@ public class TransactionController {
         }
     }
 
-    // DEPRECATED: redundant endpoint — findAll transactions endpoint will cover flagged status id's etc. in future
-    @PreAuthorize("hasAnyRole('"+ROLE_MANAGER+"','"+ROLE_ANALYST+"')")
-    @GetMapping("/fetch/flaggedTransactions")
-    public ResponseEntity<List<TransactionDashboardResponse>> getFlaggedTransactions(){
-        List<Transaction> trxs = transactionService.getFlaggedTransactions();
-
-        List<TransactionDashboardResponse> trxResponse = TransactionDashboardResponse.mapToResponse(trxs);
-
-        return ResponseEntity.ok(trxResponse);
-    }
-
-    // DEPRECATED: redundant endpoint — high risk transactions are already covered by flagged transactions
-    @PreAuthorize("hasAnyRole('"+ROLE_MANAGER+"','"+ROLE_ANALYST+"')")
-    @GetMapping("/fetch/highRiskTransactions")
-    public ResponseEntity<List<TransactionDashboardResponse>> getAllHighRiskTransactions(){
-        List<Transaction> trxs = transactionService.getAllHighRiskTransactions();
-
-        List<TransactionDashboardResponse> trxResponse = TransactionDashboardResponse.mapToResponse(trxs);
-
-        return ResponseEntity.ok(trxResponse);
-    }
-
     @PreAuthorize("hasAnyRole('"+ROLE_MANAGER+"','"+ROLE_ANALYST+"')")
     @GetMapping("/fetch/allTransactions")
     public ResponseEntity<Page<TransactionDashboardResponse>> getAllTransactions(
             @RequestParam(required = false) String senderBankCode,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String riskLevel,
             Pageable pageable)
     {
-        Page<Transaction> trxs = transactionService.getAllTransactions(senderBankCode, pageable);
+        Page<Transaction> trxs = transactionService.getAllTransactions(senderBankCode, status, riskLevel, pageable);
 
         Page<TransactionDashboardResponse> trxResponse = TransactionDashboardResponse.mapToResponse(trxs);
 
