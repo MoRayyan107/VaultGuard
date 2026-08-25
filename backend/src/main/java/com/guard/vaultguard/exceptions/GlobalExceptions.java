@@ -94,6 +94,14 @@ public class GlobalExceptions {
         return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(value=IllegalTransactionTypeException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalTransactionTypeException(IllegalTransactionTypeException ex) {
+        Map<String, Object> map =
+                buildErrorResponse(HttpStatus.BAD_REQUEST, ex, "Invalid Transaction Type");
+
+        return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
+    }
+
 
     // The method to build the error response map with the required fields
     private Map<String, Object> buildErrorResponse(HttpStatus status, Exception ex, String issue) {

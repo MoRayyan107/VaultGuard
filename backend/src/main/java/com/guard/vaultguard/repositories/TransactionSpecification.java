@@ -3,6 +3,7 @@ package com.guard.vaultguard.repositories;
 import com.guard.vaultguard.entities.*;
 import com.guard.vaultguard.entities.enums.RiskLevel;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
+import com.guard.vaultguard.entities.enums.TransactionType;
 import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -46,6 +47,15 @@ public class TransactionSpecification {
 
             Join<Transaction, RiskManagement> joinedTrxWithRiskManagement = root.join(Transaction_.riskManagement);
             return criteriaBuilder.equal(joinedTrxWithRiskManagement.get(RiskManagement_.riskLevel), transactionRiskLevel);
+        };
+    }
+
+    public static Specification<Transaction> hasTransactionType(TransactionType transactionType) {
+        return (root, criteriaQuery, criteriaBuilder) -> {
+            if (transactionType == null)
+                return criteriaBuilder.conjunction();
+
+            return criteriaBuilder.equal(root.get(Transaction_.transactionType), transactionType);
         };
     }
 }

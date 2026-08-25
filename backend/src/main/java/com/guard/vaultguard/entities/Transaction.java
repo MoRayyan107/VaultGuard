@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import jakarta.persistence.*;
 
-import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.entities.enums.TransactionType;
 
 import lombok.*;

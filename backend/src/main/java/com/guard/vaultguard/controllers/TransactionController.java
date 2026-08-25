@@ -16,7 +16,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.data.domain.Pageable;
-import java.util.List;
 import java.util.UUID;
 
 import static com.guard.vaultguard.config.Constants.ROLE_ANALYST;
@@ -60,9 +59,10 @@ public class TransactionController {
             @RequestParam(required = false) String senderBankCode,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String riskLevel,
+            @RequestParam(required = false) String transactionType,
             Pageable pageable)
     {
-        Page<Transaction> trxs = transactionService.getAllTransactions(senderBankCode, status, riskLevel, pageable);
+        Page<Transaction> trxs = transactionService.getAllTransactions(senderBankCode, status, riskLevel, transactionType, pageable);
 
         Page<TransactionDashboardResponse> trxResponse = TransactionDashboardResponse.mapToResponse(trxs);
 

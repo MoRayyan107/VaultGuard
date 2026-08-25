@@ -91,13 +91,16 @@ public class TransactionService {
     }
 
     public Page<Transaction> getAllTransactions(String bankCode, String status,
-                                                String riskLevel, Pageable pageable) {
+                                                String riskLevel, String transactionType,
+                                                Pageable pageable) {
         String normalisedBankCode = bankCode != null ? bankCode.trim().toUpperCase() : null;
         String normalisedStatus = status != null ? status.trim().toUpperCase() : null;
         String normalisedRiskLevel = riskLevel != null ? riskLevel.trim().toUpperCase() : null;
+        String normalisedTransactionType = transactionType != null ? transactionType.trim().toUpperCase() : null;
 
         RiskLevel trxRiskLevel = null;
         TransactionStatus trxStatus = null;
+        TransactionType trxType = null;
 
         if (normalisedRiskLevel != null) {
             try {
@@ -114,6 +117,15 @@ public class TransactionService {
             } catch (IllegalArgumentException e) {
                 log.warn("[WARN] Invalid transaction status provided: {}", normalisedStatus);
                 throw new IllegalTransactionStatusException("Invalid transaction status: " + normalisedStatus);
+            }
+        }
+
+        if (normalisedTransactionType != null) {
+            try {
+                trxType = TransactionType.valueOf(normalisedTransactionType);
+            } catch (IllegalArgumentException e) {
+                log.warn("[WARN] Invalid transaction type provided: {}", normalisedTransactionType);
+                throw new IllegalTransactionTypeException("Invalid transaction type: " + normalisedTransactionType);
             }
         }
 
@@ -135,6 +147,8 @@ public class TransactionService {
             specs = specs.and(TransactionSpecification.hasTransactionStatus(trxStatus));
         if (trxRiskLevel != null)
             specs = specs.and(TransactionSpecification.hasTransactionRiskLevel(trxRiskLevel));
+        if (trxType != null)
+            specs = specs.and(TransactionSpecification.hasTransactionType(trxType));
 
         return transactionRepository.findAll(specs, pageable);
     }
