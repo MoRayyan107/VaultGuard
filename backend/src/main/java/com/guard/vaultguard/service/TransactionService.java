@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static com.guard.vaultguard.config.Constants.RISKSCORE_THRESHOLD;
 import static com.guard.vaultguard.config.Constants.MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS;
@@ -93,41 +94,19 @@ public class TransactionService {
     public Page<Transaction> getAllTransactions(String bankCode, String status,
                                                 String riskLevel, String transactionType,
                                                 Pageable pageable) {
+        // sanitise the input parameters to ensure they are in a consistent format for comparison
         String normalisedBankCode = bankCode != null ? bankCode.trim().toUpperCase() : null;
         String normalisedStatus = status != null ? status.trim().toUpperCase() : null;
         String normalisedRiskLevel = riskLevel != null ? riskLevel.trim().toUpperCase() : null;
         String normalisedTransactionType = transactionType != null ? transactionType.trim().toUpperCase() : null;
 
-        RiskLevel trxRiskLevel = null;
-        TransactionStatus trxStatus = null;
-        TransactionType trxType = null;
-
-        if (normalisedRiskLevel != null) {
-            try {
-                trxRiskLevel = RiskLevel.valueOf(normalisedRiskLevel);
-            } catch (IllegalArgumentException e) {
-                log.warn("[WARN] Invalid risk level provided: {}", normalisedRiskLevel);
-                throw new IllegalRiskLevelException("Invalid risk level: " + normalisedRiskLevel);
-            }
-        }
-
-        if (normalisedStatus != null) {
-            try {
-                trxStatus = TransactionStatus.valueOf(normalisedStatus);
-            } catch (IllegalArgumentException e) {
-                log.warn("[WARN] Invalid transaction status provided: {}", normalisedStatus);
-                throw new IllegalTransactionStatusException("Invalid transaction status: " + normalisedStatus);
-            }
-        }
-
-        if (normalisedTransactionType != null) {
-            try {
-                trxType = TransactionType.valueOf(normalisedTransactionType);
-            } catch (IllegalArgumentException e) {
-                log.warn("[WARN] Invalid transaction type provided: {}", normalisedTransactionType);
-                throw new IllegalTransactionTypeException("Invalid transaction type: " + normalisedTransactionType);
-            }
-        }
+        // parse the enums and throw exceptions if invalid values are provided
+        RiskLevel trxRiskLevel = parseEnum(RiskLevel.class, normalisedRiskLevel,
+                () -> new IllegalRiskLevelException("Invalid risk level: " + normalisedRiskLevel));
+        TransactionStatus trxStatus = parseEnum(TransactionStatus.class, normalisedStatus,
+                () -> new IllegalTransactionStatusException("Invalid transaction status: " + normalisedStatus));
+        TransactionType trxType = parseEnum(TransactionType.class, normalisedTransactionType,
+                () -> new IllegalTransactionTypeException("Invalid transaction type: " + normalisedTransactionType));
 
         // create default sorting
         if (pageable.getSort().isUnsorted()) {
@@ -268,6 +247,18 @@ public class TransactionService {
         if (trx.getAmount() == null || trx.getAmount().doubleValue() <= 0) return false;
 
         return trx.getSenderLocation() != null && !trx.getSenderLocation().isEmpty();
+    }
+
+    // This method is a generic utility to parse a string into an enum value of the specified type. If the parsing fails, it throws a custom exception provided by the exceptionSupplier.
+    // can keep is static for utility class, but here we keep it private for this service class
+    private <T extends Enum<T>> T parseEnum(Class<T> enumType, String value, Supplier<RuntimeException> exceptionSupplier ) {
+        if (value == null || value.isEmpty()) return null;
+
+        try {
+            return Enum.valueOf(enumType, value);
+        } catch (IllegalArgumentException e) {
+            throw exceptionSupplier.get();
+        }
     }
 
 }
