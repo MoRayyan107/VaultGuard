@@ -60,9 +60,13 @@ public class TransactionController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String riskLevel,
             @RequestParam(required = false) String transactionType,
+            @RequestParam(required = false) String dateFrom,
+            @RequestParam(required = false) String dateTo,
             Pageable pageable)
     {
-        Page<Transaction> trxs = transactionService.getAllTransactions(senderBankCode, status, riskLevel, transactionType, pageable);
+        Page<Transaction> trxs = transactionService.getAllTransactions(senderBankCode, status,
+                                                                       riskLevel, transactionType,
+                                                                       dateFrom, dateTo, pageable);
 
         Page<TransactionDashboardResponse> trxResponse = TransactionDashboardResponse.mapToResponse(trxs);
 

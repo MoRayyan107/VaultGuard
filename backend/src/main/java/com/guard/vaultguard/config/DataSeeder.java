@@ -150,7 +150,25 @@ public class DataSeeder {
 
     private final List<Transaction> seededTransactions = new ArrayList<>();
     private final List<RiskManagement> seededRiskManagement = new ArrayList<>();
+    private final List<Bank> seededBanks = new ArrayList<>();
     private final Map<String, Bank> bankMap = new HashMap<>();
+
+    private Bank resolveBank(String bankName, String bankCode, boolean active) {
+        return bankMap.computeIfAbsent(bankCode, code ->
+                bankRepository.findByBankCode(code)
+                        .orElseGet(() -> {
+                            Bank savedBank = bankRepository.save(
+                                    Bank.builder()
+                                            .bankName(bankName)
+                                            .bankCode(bankCode)
+                                            .active(active)
+                                            .build()
+                            );
+                            seededBanks.add(savedBank);
+                            return savedBank;
+                        })
+        );
+    }
 
     @Bean
     CommandLineRunner initDatabase(PasswordEncoder passwordEncoder) {
@@ -158,8 +176,13 @@ public class DataSeeder {
             long startTime = System.currentTimeMillis();
             StringBuilder logBuilder = new StringBuilder();
 
+            seededBanks.clear();
+            seededTransactions.clear();
+            seededRiskManagement.clear();
+            bankMap.clear();
+
             // Build the header for log
-            logBuilder.append('\n' + CYAN + "========================================================" + RESET + '\n')
+            logBuilder.append("\n").append(CYAN).append("========================================================").append(RESET).append('\n')
                     .append(CYAN + BOLD + "[VaultGuard] Starting Automated Local Seeding..." + RESET + '\n')
                     .append(CYAN + "========================================================" + RESET + '\n');
 
@@ -173,17 +196,13 @@ public class DataSeeder {
                 boolean isSeeded = false;
 
                 try {
-                    Bank savedBank = bankRepository.save(
-                            Bank.builder()
-                                    .bankName(bankName)
-                                    .bankCode(bankCode)
-                                    .active(active)
-                                    .build()
-                    );
+                    boolean existed = bankRepository.findByBankCode(bankCode).isPresent();
+                    Bank savedBank = resolveBank(bankName, bankCode, active);
 
-                    totalBanks++;
-                    bankMap.put(bankCode, savedBank);
-                    isSeeded = true;
+                    if (!existed) {
+                        totalBanks++;
+                        isSeeded = true;
+                    }
                 } catch (Exception ignored) {
                     // ignore the exceptions
                 }
@@ -208,15 +227,26 @@ public class DataSeeder {
 
                 try {
                     LocalDateTime txDate = LocalDateTime.now().minusDays(t.daysAgo());
+                    Bank senderBank = bankMap.get(t.senderBankCode());
+                    Bank recipientBank = t.recipientBankCode() != null ? bankMap.get(t.recipientBankCode()) : null;
+
+                    if (senderBank == null) {
+                        logBuilder.append(YELLOW)
+                                .append("Skipping transaction seed because sender bank was not resolved: ")
+                                .append(t.senderBankCode())
+                                .append(RESET)
+                                .append('\n');
+                        continue;
+                    }
 
                     Transaction transaction = Transaction.builder()
                             .senderAccountNumber(t.senderAccountNumber())
-                            .senderBank(bankMap.get(t.senderBankCode()))
+                            .senderBank(senderBank)
                             .senderLocation(t.senderLocation())
                             .transactionReference(t.transactionReference())
                             .amount(t.amount())
                             .recipientAccountNumber(t.recipientAccountNumber())
-                            .recipientBank(t.recipientBankCode() != null ? bankMap.get(t.recipientBankCode()) : null)
+                            .recipientBank(recipientBank)
                             .transactionType(t.type())
                             .transactionDate(txDate)
                             .build();
@@ -333,9 +363,7 @@ public class DataSeeder {
 
 
         try{
-            for (int i = 0; i < bankMap.size(); i++) {
-                bankRepository.delete(bankMap.get(banksToSeed[i][1]));
-            }
+            bankRepository.deleteAll(seededBanks);
         } catch (Exception e) {
             hasErrors = true;
             logBuilder.append(YELLOW).append("Error removing seeded banks: ").append(e.getMessage()).append(RESET).append('\n');

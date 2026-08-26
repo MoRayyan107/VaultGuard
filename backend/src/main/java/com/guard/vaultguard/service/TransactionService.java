@@ -23,14 +23,20 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.guard.vaultguard.config.Constants.RISKSCORE_THRESHOLD;
 import static com.guard.vaultguard.config.Constants.MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS;
+
 
 @Service
 @Slf4j
@@ -93,12 +99,15 @@ public class TransactionService {
 
     public Page<Transaction> getAllTransactions(String bankCode, String status,
                                                 String riskLevel, String transactionType,
+                                                String dateFrom, String dateTo,
                                                 Pageable pageable) {
         // sanitise the input parameters to ensure they are in a consistent format for comparison
         String normalisedBankCode = bankCode != null ? bankCode.trim().toUpperCase() : null;
         String normalisedStatus = status != null ? status.trim().toUpperCase() : null;
         String normalisedRiskLevel = riskLevel != null ? riskLevel.trim().toUpperCase() : null;
         String normalisedTransactionType = transactionType != null ? transactionType.trim().toUpperCase() : null;
+        String normalisedDateFrom = dateFrom != null ? dateFrom.trim() : null;
+        String normalisedDateTo = dateTo != null ? dateTo.trim() : null;
 
         // parse the enums and throw exceptions if invalid values are provided
         RiskLevel trxRiskLevel = parseEnum(RiskLevel.class, normalisedRiskLevel,
@@ -107,6 +116,18 @@ public class TransactionService {
                 () -> new IllegalTransactionStatusException("Invalid transaction status: " + normalisedStatus));
         TransactionType trxType = parseEnum(TransactionType.class, normalisedTransactionType,
                 () -> new IllegalTransactionTypeException("Invalid transaction type: " + normalisedTransactionType));
+
+        // TODO: empty dates are parsing into specifications, need to handle that case and return all transactions if no date is provided
+        // Format the date from and to
+        LocalDateTime dateFromParsed = parseDateTime(normalisedDateFrom, LocalDate::atStartOfDay);
+        LocalDateTime dateToParsed = parseDateTime(normalisedDateTo, localDate ->  localDate.atTime(LocalTime.MAX));
+
+        // check the date range is valid, if both dates are provided
+        if (dateFromParsed != null && dateToParsed != null && dateFromParsed.isAfter(dateToParsed)) {
+            throw new IllegalArgumentException("Invalid date range: 'dateFrom' cannot be after 'dateTo'");
+        } else if (dateFromParsed != null && dateToParsed != null && dateToParsed.isBefore(dateFromParsed)) {
+            throw new IllegalArgumentException("Invalid date range: 'dateTo' cannot be before 'dateFrom'");
+        }
 
         // create default sorting
         if (pageable.getSort().isUnsorted()) {
@@ -128,6 +149,10 @@ public class TransactionService {
             specs = specs.and(TransactionSpecification.hasTransactionRiskLevel(trxRiskLevel));
         if (trxType != null)
             specs = specs.and(TransactionSpecification.hasTransactionType(trxType));
+        if (dateFromParsed != null)
+            specs = specs.and(TransactionSpecification.hasTransactionDateFrom(dateFromParsed));
+        if (dateToParsed != null)
+            specs = specs.and(TransactionSpecification.hasTransactionDateTo(dateToParsed));
 
         return transactionRepository.findAll(specs, pageable);
     }
@@ -258,6 +283,17 @@ public class TransactionService {
             return Enum.valueOf(enumType, value);
         } catch (IllegalArgumentException e) {
             throw exceptionSupplier.get();
+        }
+    }
+
+    private LocalDateTime parseDateTime(String date, Function<LocalDate, LocalDateTime> function) {
+        if (date == null || date.isEmpty()) return null;
+
+        try {
+            LocalDate localDate = LocalDate.parse(date);
+            return function.apply(localDate);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("Invalid date format: " + date, e);
         }
     }
 

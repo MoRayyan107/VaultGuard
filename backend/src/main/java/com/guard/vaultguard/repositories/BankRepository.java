@@ -9,6 +9,8 @@ import java.util.UUID;
 
 public interface BankRepository extends JpaRepository<Bank, UUID> {
 
+    Optional<Bank> findByBankCode(String bankCode);
+
     Optional<Bank> findByBankCodeAndActiveTrue(String bankCode);
 
     List<Bank> findByActive(boolean active);

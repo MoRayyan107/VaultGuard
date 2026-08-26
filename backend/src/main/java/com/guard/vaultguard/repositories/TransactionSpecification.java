@@ -7,6 +7,8 @@ import com.guard.vaultguard.entities.enums.TransactionType;
 import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDateTime;
+
 public class TransactionSpecification {
 
     public static Specification<Transaction> isTransactionScored() {
@@ -56,6 +58,26 @@ public class TransactionSpecification {
                 return criteriaBuilder.conjunction();
 
             return criteriaBuilder.equal(root.get(Transaction_.transactionType), transactionType);
+        };
+    }
+
+    // starting from dateFrom
+    public static Specification<Transaction> hasTransactionDateFrom(LocalDateTime dateFrom) {
+        return (root, criteriaQuery, criteriaBuilder) -> {
+            if (dateFrom == null)
+                return criteriaBuilder.conjunction();
+
+            return criteriaBuilder.greaterThanOrEqualTo(root.get(Transaction_.transactionDate), dateFrom);
+        };
+    }
+
+    // ending at dateTo
+    public static Specification<Transaction> hasTransactionDateTo(LocalDateTime dateTo) {
+        return (root, criteriaQuery, criteriaBuilder) -> {
+            if (dateTo == null)
+                return criteriaBuilder.conjunction();
+
+            return criteriaBuilder.lessThanOrEqualTo(root.get(Transaction_.transactionDate), dateTo);
         };
     }
 }
