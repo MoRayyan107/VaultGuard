@@ -277,7 +277,8 @@ public class TransactionService {
     // This method is a generic utility to parse a string into an enum value of the specified type. If the parsing fails, it throws a custom exception provided by the exceptionSupplier.
     // can keep is static for utility class, but here we keep it private for this service class
     private <T extends Enum<T>> T parseEnum(Class<T> enumType, String value, Supplier<RuntimeException> exceptionSupplier ) {
-        if (value == null || value.isEmpty()) return null;
+        if (value == null ) return null;
+        if (value.isEmpty()) throw exceptionSupplier.get();
 
         try {
             return Enum.valueOf(enumType, value);
@@ -287,7 +288,8 @@ public class TransactionService {
     }
 
     private LocalDateTime parseDateTime(String date, Function<LocalDate, LocalDateTime> function) {
-        if (date == null || date.isEmpty()) return null;
+        if (date == null) return null;
+        if (date.isEmpty()) throw new IllegalArgumentException("Date cannot be empty: " + date);
 
         try {
             LocalDate localDate = LocalDate.parse(date);

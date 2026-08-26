@@ -15,7 +15,7 @@ import java.util.UUID;
 @Data
 public class ProcessTrxResponse {
 
-    private UUID transactionId;
+    private UUID vaultguardTrxId;          // the transaction id in our system
     private TransactionStatus status;       // e.g. ACCEPTED / REJECTED — NOT the risk-derived status
     private String message;                 // "Transaction accepted for processing" / failure reason
     private LocalDateTime transactionDate;
@@ -28,7 +28,7 @@ public class ProcessTrxResponse {
     // when the trx passes the fraud detection
     public static ProcessTrxResponse success(Transaction trx){
         return ProcessTrxResponse.builder()
-                .transactionId(trx.getId())
+                .vaultguardTrxId(trx.getId())
                 .status(trx.getRiskManagement() != null ? trx.getRiskManagement().getTransactionStatus() : null)
                 .message("Transaction completed successfully")
                 .transactionDate(trx.getTransactionDate())

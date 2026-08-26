@@ -102,6 +102,13 @@ public class GlobalExceptions {
         return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(value=IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        Map<String, Object> map =
+                buildErrorResponse(HttpStatus.BAD_REQUEST, ex, "Invalid Argument");
+
+        return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
+    }
 
     // The method to build the error response map with the required fields
     private Map<String, Object> buildErrorResponse(HttpStatus status, Exception ex, String issue) {
