@@ -117,7 +117,6 @@ public class TransactionService {
         TransactionType trxType = parseEnum(TransactionType.class, normalisedTransactionType,
                 () -> new IllegalTransactionTypeException("Invalid transaction type: " + normalisedTransactionType));
 
-        // TODO: empty dates are parsing into specifications, need to handle that case and return all transactions if no date is provided
         // Format the date from and to
         LocalDateTime dateFromParsed = parseDateTime(normalisedDateFrom, LocalDate::atStartOfDay);
         LocalDateTime dateToParsed = parseDateTime(normalisedDateTo, localDate ->  localDate.atTime(LocalTime.MAX));
@@ -240,11 +239,13 @@ public class TransactionService {
         // also to pretect from duploicates we can use the bankTrxReference as a unique key for each transaction
 
         // since each transaction from bank has a unique reference, we can use that as a key to check for duplicates
+        // key -> "idempotency:{senderBankCode}:{bankTrxReference}"
         String redisKey = "idempotency:" + trxReq.getSenderBankCode() + ":" + trxReq.getBankTrxReference();
         String redisValue = UUID.randomUUID().toString();
 
         Boolean isDuplicate = redisTemplate.opsForValue().setIfAbsent(redisKey, redisValue, 2, TimeUnit.MINUTES);
 
+        // returns TRUE if created, FALSE if exists
         return isDuplicate != null && isDuplicate;
     }
 

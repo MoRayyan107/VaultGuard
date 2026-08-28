@@ -49,13 +49,22 @@ public class GlobalExceptions {
         return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
     }
 
-    // when user tries to access a resource that does not exist in the DB
+    // BANKS
+    // When user provides a bank code that does not exist in the DB
     @ExceptionHandler(value = BankCodeNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleBankCodeNotFoundException(BankCodeNotFoundException ex) {
         Map<String, Object> map =
                 buildErrorResponse(HttpStatus.NOT_FOUND, ex, "Bank not found");
 
         return new ResponseEntity<>(map, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(value = BankNotActiveException.class)
+    public ResponseEntity<Map<String, Object>> handleBankNotActiveException(BankNotActiveException ex) {
+        Map<String, Object> map =
+                buildErrorResponse(HttpStatus.BAD_REQUEST, ex, "Bank is not active");
+
+        return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
     }
 
     // when user tries to process a transaction that already exists in the DB (Idempotency check)
@@ -109,6 +118,17 @@ public class GlobalExceptions {
 
         return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
     }
+
+    // Any unwanted Exceptions to be thrown as 500 Internal Server Error
+    @ExceptionHandler(value=Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+        Map<String, Object> map =
+                buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex, "Internal Server Error");
+
+        return new ResponseEntity<>(map, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+
 
     // The method to build the error response map with the required fields
     private Map<String, Object> buildErrorResponse(HttpStatus status, Exception ex, String issue) {

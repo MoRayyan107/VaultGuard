@@ -7,6 +7,7 @@ public final class Constants {
             // only login and logout are public, all other endpoints require authentication
             "/api/auth/login",
             "/api/auth/logout",
+            "/error",  //  the error endpoint that gets thrown by Spring internal exceptions
 
             // Swagger
             "/v3/api-docs/**",
