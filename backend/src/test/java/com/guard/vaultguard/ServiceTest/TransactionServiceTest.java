@@ -13,6 +13,7 @@ import com.guard.vaultguard.kafka.TransactionProducer;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import com.guard.vaultguard.service.BankService;
 import com.guard.vaultguard.service.TransactionService;
+import com.guard.vaultguard.service.util.TransactionUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,9 @@ class TransactionServiceTest {
     private BankService bankService;
 
     @Mock
+    private TransactionUtil transactionUtil;
+
+    @Mock
     private StringRedisTemplate redisTemplate;
 
     @Mock
@@ -65,6 +69,20 @@ class TransactionServiceTest {
 
     @BeforeEach
     void setUp() {
+        senderBank = Bank.builder()
+                .bankId(UUID.randomUUID())
+                .bankCode(SENDER_BANK_CODE)
+                .bankName("Sender Bank")
+                .active(true)
+                .build();
+
+        receiverBank = Bank.builder()
+                .bankId(UUID.randomUUID())
+                .bankCode(RECIPIENT_BANK_CODE)
+                .bankName("Receiver Bank")
+                .active(true)
+                .build();
+
         trxRequest = TransactionRequest.builder()
                 .senderAccountNumber(SENDER_ACCOUNT_NUMBER)
                 .senderBankCode(SENDER_BANK_CODE)
@@ -98,19 +116,6 @@ class TransactionServiceTest {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        senderBank = Bank.builder()
-                .bankId(UUID.randomUUID())
-                .bankCode(SENDER_BANK_CODE)
-                .bankName("Sender Bank")
-                .active(true)
-                .build();
-
-        receiverBank = Bank.builder()
-                .bankId(UUID.randomUUID())
-                .bankCode(RECIPIENT_BANK_CODE)
-                .bankName("Receiver Bank")
-                .active(true)
-                .build();
     }
 
     @Nested
@@ -121,9 +126,7 @@ class TransactionServiceTest {
             // Arrange
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(valueOperations.setIfAbsent(anyString(), anyString(), eq(2L), eq(TimeUnit.MINUTES))).thenReturn(Boolean.TRUE);
-            when(bankService.getBankByCode(SENDER_BANK_CODE)).thenReturn(senderBank);
-            when(bankService.getBankByCode(RECIPIENT_BANK_CODE)).thenReturn(receiverBank);
-            when(transactionRepository.save(any(Transaction.class))).thenReturn(expectedTransaction);
+            when(transactionUtil.saveTransaction(any(TransactionRequest.class))).thenReturn(expectedTransaction);
 
             // Act
             Transaction result = transactionService.processTransaction(trxRequest);
@@ -161,7 +164,8 @@ class TransactionServiceTest {
             senderBank.setActive(false);
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(valueOperations.setIfAbsent(anyString(), anyString(), eq(2L), eq(TimeUnit.MINUTES))).thenReturn(Boolean.TRUE);
-            when(bankService.getBankByCode(SENDER_BANK_CODE)).thenThrow(new BankNotActiveException("Sender bank is not active"));
+            when(transactionUtil.saveTransaction(any(TransactionRequest.class)))
+                    .thenThrow(new BankNotActiveException("Sender bank is not active"));
 
             // Act & Assert
             assertThrows(BankNotActiveException.class, () -> transactionService.processTransaction(trxRequest));
@@ -172,10 +176,9 @@ class TransactionServiceTest {
             // Arrange
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(valueOperations.setIfAbsent(anyString(), anyString(), eq(2L), eq(TimeUnit.MINUTES))).thenReturn(Boolean.TRUE);
-            when(bankService.getBankByCode(SENDER_BANK_CODE)).thenReturn(senderBank);
-            when(bankService.getBankByCode(RECIPIENT_BANK_CODE)).thenReturn(receiverBank);
-            when(transactionRepository.save(any(Transaction.class))).thenThrow(new DataIntegrityViolationException("Duplicate key"));
-            when(transactionRepository.findByTransactionReference(BANK_REFERENCE)).thenReturn(Optional.of(expectedTransaction));
+            when(transactionUtil.saveTransaction(any(TransactionRequest.class))).
+                    thenThrow(new DataIntegrityViolationException("Duplicate key")); // Simulate duplicate transaction
+            when(transactionUtil.getTransactionByReference(BANK_REFERENCE)).thenReturn(expectedTransaction);
 
             // Act & Assert
             Transaction returnedTransactionForDuplicate = transactionService.processTransaction(trxRequest);
