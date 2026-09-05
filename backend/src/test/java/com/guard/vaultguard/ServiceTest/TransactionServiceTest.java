@@ -2,9 +2,13 @@ package com.guard.vaultguard.ServiceTest;
 
 import com.guard.vaultguard.dto.transaction.TransactionRequest;
 import com.guard.vaultguard.entities.Bank;
+import com.guard.vaultguard.entities.RiskManagement;
 import com.guard.vaultguard.entities.Transaction;
+import com.guard.vaultguard.entities.enums.RiskLevel;
+import com.guard.vaultguard.entities.enums.TransactionStatus;
 import com.guard.vaultguard.exceptions.BankNotActiveException;
 import com.guard.vaultguard.exceptions.DuplicateTransactionException;
+import com.guard.vaultguard.exceptions.IllegalTransactionException;
 import com.guard.vaultguard.kafka.TransactionProducer;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import com.guard.vaultguard.service.BankService;
@@ -16,13 +20,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.guard.vaultguard.Constants.*;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -50,6 +58,8 @@ class TransactionServiceTest {
     private ValueOperations<String, String> valueOperations;
 
     private TransactionRequest trxRequest;
+    private Transaction expectedTransaction;
+    private RiskManagement riskManagement;
     private Bank senderBank;
     private Bank receiverBank;
 
@@ -64,6 +74,28 @@ class TransactionServiceTest {
                 .amount(NORMAL_TRANSACTION_AMOUNT)
                 .senderLocation(SENDER_LOCATION)
                 .transactionType(TRANSFER_TRANSACTION_TYPE)
+                .build();
+
+        expectedTransaction = Transaction.builder()
+                .id(UUID.randomUUID())
+                .senderAccountNumber(SENDER_ACCOUNT_NUMBER)
+                .senderBank(senderBank)
+                .senderLocation(SENDER_LOCATION)
+                .transactionReference(BANK_REFERENCE)
+                .amount(NORMAL_TRANSACTION_AMOUNT)
+                .recipientAccountNumber(RECIPIENT_ACCOUNT_NUMBER)
+                .recipientBank(receiverBank)
+                .transactionType(TRANSFER_TRANSACTION_TYPE)
+                .build();
+
+        riskManagement = RiskManagement.builder()
+                .id(UUID.randomUUID())
+                .transaction(expectedTransaction)
+                .riskScore(0.5)
+                .riskLevel(RiskLevel.LOW)
+                .transactionStatus(TransactionStatus.COMPLETED)
+                .reason("Low risk")
+                .createdAt(LocalDateTime.now())
                 .build();
 
         senderBank = Bank.builder()
@@ -87,30 +119,40 @@ class TransactionServiceTest {
         @Test
         void processTransaction_shouldProcessTransactionSuccessfully() {
             // Arrange
-            Transaction savedTransaction = Transaction.builder()
-                    .id(UUID.randomUUID())
-                    .senderAccountNumber(SENDER_ACCOUNT_NUMBER)
-                    .senderBank(senderBank)
-                    .senderLocation(SENDER_LOCATION)
-                    .transactionReference(BANK_REFERENCE)
-                    .amount(NORMAL_TRANSACTION_AMOUNT)
-                    .recipientAccountNumber(RECIPIENT_ACCOUNT_NUMBER)
-                    .recipientBank(receiverBank)
-                    .transactionType(TRANSFER_TRANSACTION_TYPE)
-                    .build();
-
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
             when(valueOperations.setIfAbsent(anyString(), anyString(), eq(2L), eq(TimeUnit.MINUTES))).thenReturn(Boolean.TRUE);
             when(bankService.getBankByCode(SENDER_BANK_CODE)).thenReturn(senderBank);
             when(bankService.getBankByCode(RECIPIENT_BANK_CODE)).thenReturn(receiverBank);
-            when(transactionRepository.save(any(Transaction.class))).thenReturn(savedTransaction);
+            when(transactionRepository.save(any(Transaction.class))).thenReturn(expectedTransaction);
 
             // Act
             Transaction result = transactionService.processTransaction(trxRequest);
 
             // Assert
             assertNotNull(result);
-            assertEquals(savedTransaction.getId(), result.getId());
+            assertEquals(expectedTransaction.getId(), result.getId());
+            assertNull(result.getRiskManagement()); // risk isnt set when process is called, since its an Async work
+        }
+
+        @Test
+        void processTransaction_shouldThrowExceptionWhenRequestIsInvalid() {
+            //  Arrange
+            trxRequest.setRecipientAccountNumber(null); // should throw IlleagalTrannsaction
+
+            // Act and assert
+            assertThatThrownBy(() -> transactionService.processTransaction(trxRequest))
+                    .isInstanceOf(IllegalTransactionException.class)
+                    .hasMessageContaining("Invalid transaction data");
+        }
+
+        @Test
+        void processTransaction_shouldThrowExceptionWhenTransactionIsDuplicated() {
+            // Arrange
+            when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+            when(valueOperations.setIfAbsent(anyString(), anyString(), eq(2L), eq(TimeUnit.MINUTES))).thenReturn(Boolean.FALSE);
+
+            // Act and assert
+            assertThrows(DuplicateTransactionException.class, () -> transactionService.processTransaction(trxRequest));
         }
 
         @Test
@@ -122,17 +164,23 @@ class TransactionServiceTest {
             when(bankService.getBankByCode(SENDER_BANK_CODE)).thenThrow(new BankNotActiveException("Sender bank is not active"));
 
             // Act & Assert
-           assertThrows(BankNotActiveException.class, () -> transactionService.processTransaction(trxRequest));
+            assertThrows(BankNotActiveException.class, () -> transactionService.processTransaction(trxRequest));
         }
 
         @Test
-        void processTransaction_shouldThrowExceptionWhenTransactionIsDuplicated() {
+        void processTransaction_shouldReturnSavedTransactionBasedOnReference() {
             // Arrange
             when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-            when(valueOperations.setIfAbsent(anyString(), anyString(), eq(2L), eq(TimeUnit.MINUTES))).thenReturn(Boolean.FALSE);
+            when(valueOperations.setIfAbsent(anyString(), anyString(), eq(2L), eq(TimeUnit.MINUTES))).thenReturn(Boolean.TRUE);
+            when(bankService.getBankByCode(SENDER_BANK_CODE)).thenReturn(senderBank);
+            when(bankService.getBankByCode(RECIPIENT_BANK_CODE)).thenReturn(receiverBank);
+            when(transactionRepository.save(any(Transaction.class))).thenThrow(new DataIntegrityViolationException("Duplicate key"));
+            when(transactionRepository.findByTransactionReference(BANK_REFERENCE)).thenReturn(Optional.of(expectedTransaction));
 
-            // Act and assert
-            assertThrows(DuplicateTransactionException.class, () -> transactionService.processTransaction(trxRequest));
+            // Act & Assert
+            Transaction returnedTransactionForDuplicate = transactionService.processTransaction(trxRequest);
+            assertNotNull(returnedTransactionForDuplicate);
+            assertEquals(expectedTransaction.getId(), returnedTransactionForDuplicate.getId());
         }
     }
 }

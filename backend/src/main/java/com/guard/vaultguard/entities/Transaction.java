@@ -50,7 +50,7 @@ public class Transaction {
     @JoinColumn(name = "recipient_bank_id")
     private Bank recipientBank;
 
-    @OneToOne(mappedBy = "transaction",fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "transaction", fetch = FetchType.LAZY)
     private RiskManagement riskManagement;
 
     @Column(nullable = false)

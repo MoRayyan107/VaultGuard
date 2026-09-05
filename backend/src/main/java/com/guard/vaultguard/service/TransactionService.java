@@ -12,7 +12,9 @@ import com.guard.vaultguard.kafka.TransactionProducer;
 import com.guard.vaultguard.repositories.RiskManagmentRepository;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import com.guard.vaultguard.repositories.TransactionSpecification;
-import jakarta.transaction.Transactional;
+import com.guard.vaultguard.service.util.TransactionUtil;
+import lombok.AllArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -40,60 +42,30 @@ import static com.guard.vaultguard.config.Constants.MAX_TIME_DIFF_LOCATION_CHANG
 
 @Service
 @Slf4j
+@AllArgsConstructor
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final StringRedisTemplate redisTemplate;
     private final TransactionProducer transactionProducer;
     private final BankService bankService;
+    private final TransactionUtil transactionUtil;
     private final RiskManagmentService riskManagmentService;
     private final RiskManagmentRepository riskManagmentRepository;
 
-    public TransactionService(TransactionRepository transactionRepository,
-                              RiskManagmentService riskManagmentService,
-                              StringRedisTemplate redisTemplate,
-                              TransactionProducer transactionProducer,
-                              BankService bankService, RiskManagmentRepository riskManagmentRepository)
-    {
-        this.transactionRepository = transactionRepository;
-        this.riskManagmentService = riskManagmentService;
-        this.redisTemplate = redisTemplate;
-        this.transactionProducer = transactionProducer;
-        this.bankService = bankService;
-        this.riskManagmentRepository = riskManagmentRepository;
-    }
-
-    @Transactional
     public Transaction processTransaction(TransactionRequest trx){
         if (!validateTransaction(trx)) throw new IllegalTransactionException("Invalid transaction data");
         if (!checkDuplicateTransaction(trx)) throw new DuplicateTransactionException("Duplicate transaction detected");
 
-        Transaction transaction = Transaction.builder()
-                .senderAccountNumber(trx.getSenderAccountNumber())
-                .senderBank(bankService.getBankByCode(trx.getSenderBankCode()))
-                .amount(trx.getAmount())
-                .transactionType(trx.getTransactionType())
-                .senderLocation(trx.getSenderLocation())
-                .recipientAccountNumber(trx.getRecipientAccountNumber())
-                .recipientBank(bankService.getBankByCode(trx.getRecipientBankCode()))
-                .transactionReference(trx.getBankTrxReference())
-
-                // default values when making a transaction
-                .transactionDate(LocalDateTime.now()).build();
-
         try {
-            Transaction savedTransaction = transactionRepository.save(transaction);
+            Transaction returnedTransaction = transactionUtil.saveTransaction(trx);
+            transactionProducer.sendTransaction(returnedTransaction);
+            log.info("[INFO] Transaction saved with ID: {}, and sent to Kafka", returnedTransaction.getId());
+            return returnedTransaction;
 
-            log.info("[INFO] Transaction saved with ID: {}", savedTransaction.getId());
-            transactionProducer.sendTransaction(savedTransaction);
-
-            return savedTransaction;
-        }
-        catch (DataIntegrityViolationException e) {
-            // return the data  DB
-            log.info("[INFO] Duplicate transaction detected for reference: {}", trx.getBankTrxReference(), e);
-            return transactionRepository.findByTransactionReference(trx.getBankTrxReference())
-                    .orElseThrow(() -> new IllegalTransactionException("Duplicate transaction detected but not found in DB"));
+        } catch (DataIntegrityViolationException ex){
+            log.warn("[WARN] Data integrity violation while saving transaction: {}", ex.getMessage());
+            return transactionUtil.getTransactionByReference(trx.getBankTrxReference());
         }
     }
 
@@ -243,10 +215,11 @@ public class TransactionService {
         String redisKey = "idempotency:" + trxReq.getSenderBankCode() + ":" + trxReq.getBankTrxReference();
         String redisValue = UUID.randomUUID().toString();
 
-        Boolean isDuplicate = redisTemplate.opsForValue().setIfAbsent(redisKey, redisValue, 2, TimeUnit.MINUTES);
+        Boolean isUnique = redisTemplate.opsForValue().setIfAbsent(redisKey, redisValue, 2, TimeUnit.MINUTES);
+        System.out.println("Redis key: " + redisTemplate.keys(redisKey).stream().findFirst().orElse("Not found") + ", Redis value: " + redisValue + ", isUnique: " + isUnique + "TTL: " + redisTemplate.getExpire(redisKey) + " seconds");
 
         // returns TRUE if created, FALSE if exists
-        return isDuplicate != null && isDuplicate;
+        return isUnique != null && isUnique;
     }
 
     private Long getCurrentTimeStamp_Millis(){
