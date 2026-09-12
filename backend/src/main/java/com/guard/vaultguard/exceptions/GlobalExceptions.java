@@ -62,9 +62,9 @@ public class GlobalExceptions {
     @ExceptionHandler(value = BankNotActiveException.class)
     public ResponseEntity<Map<String, Object>> handleBankNotActiveException(BankNotActiveException ex) {
         Map<String, Object> map =
-                buildErrorResponse(HttpStatus.BAD_REQUEST, ex, "Bank is not active");
+                buildErrorResponse(HttpStatus.FORBIDDEN, ex, "Bank is not active");
 
-        return new ResponseEntity<>(map, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(map, HttpStatus.FORBIDDEN);
     }
 
     // when user tries to process a transaction that already exists in the DB (Idempotency check)

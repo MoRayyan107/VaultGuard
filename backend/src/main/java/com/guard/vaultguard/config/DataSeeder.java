@@ -67,7 +67,7 @@ public class DataSeeder {
             String recipientAccountNumber, String recipientBankCode,
             TransactionType type, TransactionStatus status,
             int daysAgo, Double riskScore, RiskLevel riskLevel,
-            String transactionReference
+            String reason, String transactionReference
     ) {}
 
     private static SeedTransaction[] buildTransactionsToSeed() {
@@ -80,53 +80,65 @@ public class DataSeeder {
                 "Abu Dhabi, UAE", "Birmingham, UK", "Chennai, IN", "Islamabad, PK"
         };
 
-        for (int i = 1; i <= 50; i++) {
-            String senderBankCode = senderBanks[(i - 1) % senderBanks.length];
-            TransactionType type = switch (i % 3) {
+        // 50 risk scores spread across 0.0–1.0
+        // Distribution: ~60% LOW (0.0–0.4), ~16% MEDIUM (0.5–0.6), ~24% HIGH (0.7–1.0)
+        // Matches RiskManagmentService.getLevel() thresholds and README fraud scoring table
+        double[] scores = {
+                0.0, 0.0, 0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.3, 0.3,
+                0.3, 0.4, 0.4, 0.4, 0.0, 0.1, 0.2, 0.3, 0.4, 0.0,
+                0.1, 0.2, 0.3, 0.0, 0.1, 0.2, 0.4, 0.3, 0.1, 0.2,
+                0.5, 0.5, 0.5, 0.6, 0.6, 0.6, 0.5, 0.6,
+                0.7, 0.7, 0.7, 0.8, 0.8, 0.8, 0.9, 0.9, 1.0, 0.7, 0.8, 0.9
+        };
+
+        for (int i = 0; i < 50; i++) {
+            int idx = i + 1;
+            double score = scores[i];
+
+            // Derive risk level from score — matches RiskManagmentService.getLevel()
+            RiskLevel riskLevel;
+            if (score >= 0.7) riskLevel = RiskLevel.HIGH;
+            else if (score >= 0.5) riskLevel = RiskLevel.MEDIUM;
+            else riskLevel = RiskLevel.LOW;
+
+            // Derive status from score — matches TransactionService.updateRiskScore()
+            TransactionStatus status = score >= Constants.RISKSCORE_THRESHOLD
+                    ? TransactionStatus.FLAGGED
+                    : TransactionStatus.COMPLETED;
+
+            // Derive reason from score — matches TransactionService.updateRiskScore()
+            String reason = score >= Constants.RISKSCORE_THRESHOLD
+                    ? "High risk transaction"
+                    : "Normal transaction";
+
+            String senderBankCode = senderBanks[i % senderBanks.length];
+            TransactionType type = switch (idx % 3) {
                 case 1 -> TransactionType.TRANSFER;
                 case 2 -> TransactionType.DEPOSIT;
                 default -> TransactionType.WITHDRAW;
             };
 
-            TransactionStatus status = switch (i % 4) {
-                case 1 -> TransactionStatus.COMPLETED;
-                case 2 -> TransactionStatus.PENDING;
-                case 3 -> TransactionStatus.FAILED;
-                default -> TransactionStatus.FLAGGED;
-            };
-
-            RiskLevel riskLevel = switch (status) {
-                case COMPLETED -> RiskLevel.LOW;
-                case PENDING -> RiskLevel.MEDIUM;
-                case FAILED, FLAGGED -> RiskLevel.HIGH;
-            };
-
-            Double riskScore = switch (riskLevel) {
-                case LOW -> 0.15;
-                case MEDIUM -> 0.45;
-                case HIGH -> 0.85;
-            };
-
-            String recipientAccountNumber = type == TransactionType.TRANSFER ? String.format("ACC2%04d", i) : null;
+            String recipientAccountNumber = type == TransactionType.TRANSFER ? String.format("ACC2%04d", idx) : null;
             String recipientBankCode = type == TransactionType.TRANSFER
                     ? recipientBanks[(i + 1) % recipientBanks.length]
                     : null;
 
-            BigDecimal amount = new BigDecimal(String.format("%d.%02d", 25 + ((i * 137) % 9750), (i * 17) % 100));
+            BigDecimal amount = new BigDecimal(String.format("%d.%02d", 25 + ((idx * 137) % 9750), (idx * 17) % 100));
 
             seeds.add(new SeedTransaction(
-                    String.format("ACC1%04d", i),
+                    String.format("ACC1%04d", idx),
                     senderBankCode,
-                    locations[(i - 1) % locations.length],
+                    locations[i % locations.length],
                     amount,
                     recipientAccountNumber,
                     recipientBankCode,
                     type,
                     status,
-                    50 - i,
-                    riskScore,
+                    50 - idx,
+                    score,
                     riskLevel,
-                    String.format("%s-REF-%04d", senderBankCode, i)
+                    reason,
+                    String.format("%s-REF-%04d", senderBankCode, idx)
             ));
         }
 
@@ -259,6 +271,7 @@ public class DataSeeder {
                             .riskScore(t.riskScore())
                             .riskLevel(t.riskLevel())
                             .transactionStatus(t.status())
+                            .reason(t.reason())
                             .createdAt(txDate)
                             .build();
 

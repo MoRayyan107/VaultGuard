@@ -15,6 +15,8 @@ public final class Constants {
             "/swagger-ui.html"
     };
 
+    public static String AUTH_ENDPOINT_FOR_RATE_LIMITING_SKIP = "/api/auth/logout";
+
     // Service
     public final static Integer MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS = 300; // 5 minutes
     public final static Double RISKSCORE_THRESHOLD = 0.7;

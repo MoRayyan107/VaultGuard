@@ -216,8 +216,6 @@ public class TransactionService {
         String redisValue = UUID.randomUUID().toString();
 
         Boolean isUnique = redisTemplate.opsForValue().setIfAbsent(redisKey, redisValue, 2, TimeUnit.MINUTES);
-        System.out.println("Redis key: " + redisTemplate.keys(redisKey).stream().findFirst().orElse("Not found") + ", Redis value: " + redisValue + ", isUnique: " + isUnique + "TTL: " + redisTemplate.getExpire(redisKey) + " seconds");
-
         // returns TRUE if created, FALSE if exists
         return isUnique != null && isUnique;
     }

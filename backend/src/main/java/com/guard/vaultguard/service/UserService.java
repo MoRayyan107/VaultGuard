@@ -9,7 +9,7 @@ import com.guard.vaultguard.exceptions.InvalidCredentialException;
 import com.guard.vaultguard.exceptions.InvalidUserDataException;
 import com.guard.vaultguard.repositories.UserRepository;
 import com.guard.vaultguard.security.jwt.JwtUtil;
-import com.guard.vaultguard.security.userSecurity.UserPrincipal;
+import com.guard.vaultguard.security.principals.UserPrincipal;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
