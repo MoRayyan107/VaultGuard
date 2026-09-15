@@ -8,8 +8,8 @@ import com.guard.vaultguard.exceptions.DuplicateUsernameException;
 import com.guard.vaultguard.exceptions.InvalidCredentialException;
 import com.guard.vaultguard.exceptions.InvalidUserDataException;
 import com.guard.vaultguard.repositories.UserRepository;
-import com.guard.vaultguard.security.jwt.JwtUtil;
-import com.guard.vaultguard.security.userSecurity.UserPrincipal;
+import com.guard.vaultguard.security.util.JwtUtil;
+import com.guard.vaultguard.security.principals.UserPrincipal;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -77,7 +77,7 @@ public class UserService{
 
     public UserResponse verifyUserOnLogin(UserRequest request, HttpServletResponse response) {
         if (!validateUserInputs(request)) throw new InvalidUserDataException("Username or Password is empty");
-
+        log.info("[INFO] Attempting to authenticate user: {}", request.getUsername());
         try {
             Authentication auth = authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
@@ -104,6 +104,7 @@ public class UserService{
                     .sameSite("Strict")
                     .build();
             response.addHeader(HttpHeaders.SET_COOKIE, newCookie.toString());
+            log.info("[INFO] User authenticated successfully: {}", username);
 
             return buildUserResponse(username, role);
         } catch (BadCredentialsException e) {
@@ -131,6 +132,7 @@ public class UserService{
         UserResponse.UserResponseBuilder res = UserResponse.builder()
                 .username(username)
                 .role(role);
+        log.info("[INFO] User {} has been authenticated successfully: {}", username, role);
 
         return res.build();
     }

@@ -3,8 +3,11 @@ package com.guard.vaultguard.repositories;
 import com.guard.vaultguard.entities.*;
 import com.guard.vaultguard.entities.enums.RiskLevel;
 import com.guard.vaultguard.entities.enums.TransactionStatus;
+import com.guard.vaultguard.entities.enums.TransactionType;
 import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
+
+import java.time.LocalDateTime;
 
 public class TransactionSpecification {
 
@@ -46,6 +49,35 @@ public class TransactionSpecification {
 
             Join<Transaction, RiskManagement> joinedTrxWithRiskManagement = root.join(Transaction_.riskManagement);
             return criteriaBuilder.equal(joinedTrxWithRiskManagement.get(RiskManagement_.riskLevel), transactionRiskLevel);
+        };
+    }
+
+    public static Specification<Transaction> hasTransactionType(TransactionType transactionType) {
+        return (root, criteriaQuery, criteriaBuilder) -> {
+            if (transactionType == null)
+                return criteriaBuilder.conjunction();
+
+            return criteriaBuilder.equal(root.get(Transaction_.transactionType), transactionType);
+        };
+    }
+
+    // starting from dateFrom
+    public static Specification<Transaction> hasTransactionDateFrom(LocalDateTime dateFrom) {
+        return (root, criteriaQuery, criteriaBuilder) -> {
+            if (dateFrom == null)
+                return criteriaBuilder.conjunction();
+
+            return criteriaBuilder.greaterThanOrEqualTo(root.get(Transaction_.transactionDate), dateFrom);
+        };
+    }
+
+    // ending at dateTo
+    public static Specification<Transaction> hasTransactionDateTo(LocalDateTime dateTo) {
+        return (root, criteriaQuery, criteriaBuilder) -> {
+            if (dateTo == null)
+                return criteriaBuilder.conjunction();
+
+            return criteriaBuilder.lessThanOrEqualTo(root.get(Transaction_.transactionDate), dateTo);
         };
     }
 }

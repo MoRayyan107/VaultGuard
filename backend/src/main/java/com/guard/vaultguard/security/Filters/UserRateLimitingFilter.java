@@ -1,5 +1,6 @@
-package com.guard.vaultguard.security.rateLimiting;
+package com.guard.vaultguard.security.Filters;
 
+import com.guard.vaultguard.security.util.RateLimitUtil;
 import com.guard.vaultguard.service.rateLimiting.UserRateLimitingService;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
@@ -14,13 +15,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+import static com.guard.vaultguard.config.Constants.AUTH_ENDPOINT_FOR_RATE_LIMITING_SKIP;
+
 @Component
 public class UserRateLimitingFilter extends OncePerRequestFilter {
 
     private final UserRateLimitingService userRateLimitingService;
-    private final Util rateLimiterUtil;
+    private final RateLimitUtil rateLimiterUtil;
 
-    public UserRateLimitingFilter(UserRateLimitingService userRateLimitingService, Util rateLimiterUtil){
+    public UserRateLimitingFilter(UserRateLimitingService userRateLimitingService, RateLimitUtil rateLimiterUtil){
         this.userRateLimitingService = userRateLimitingService;
         this.rateLimiterUtil = rateLimiterUtil;
     }
@@ -32,9 +35,7 @@ public class UserRateLimitingFilter extends OncePerRequestFilter {
 
         // skipp the rate limiter for Swagger
         String urlPath = request.getRequestURI();
-        if (urlPath.startsWith("/v3/api-docs") ||
-                urlPath.startsWith("/swagger-ui") ||
-                urlPath.equals("/api/auth/register"))
+        if (urlPath.startsWith(AUTH_ENDPOINT_FOR_RATE_LIMITING_SKIP))
         {
             filterChain.doFilter(request, response);
             return;

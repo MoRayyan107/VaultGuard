@@ -24,8 +24,9 @@ public class Bank {
     @Column(name = "bank_code", unique = true)
     private String bankCode;
 
-    // meaning if the bank is registerd with us or not
     @Column(nullable = false)
     private boolean active;
 
+    @Column(nullable = false, unique = true)
+    private String apiKey;
 }

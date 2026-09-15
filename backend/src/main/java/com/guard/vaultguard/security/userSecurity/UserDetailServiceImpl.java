@@ -2,6 +2,7 @@ package com.guard.vaultguard.security.userSecurity;
 
 import com.guard.vaultguard.entities.Users;
 import com.guard.vaultguard.repositories.UserRepository;
+import com.guard.vaultguard.security.principals.UserPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

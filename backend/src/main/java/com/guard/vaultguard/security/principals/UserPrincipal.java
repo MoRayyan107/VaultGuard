@@ -1,4 +1,4 @@
-package com.guard.vaultguard.security.userSecurity;
+package com.guard.vaultguard.security.principals;
 
 import com.guard.vaultguard.entities.Users;
 import org.springframework.security.core.GrantedAuthority;

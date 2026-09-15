@@ -12,15 +12,18 @@ import com.guard.vaultguard.repositories.BankRepository;
 import com.guard.vaultguard.repositories.RiskManagmentRepository;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import com.guard.vaultguard.repositories.UserRepository;
+import com.guard.vaultguard.security.util.ApiFilterUtil;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,6 +53,9 @@ public class DataSeeder {
     private final TransactionRepository transactionRepository;
     private final RiskManagmentRepository riskManagmentRepository;
 
+    @Value("${bank.api.key.starter}")
+    private String bankApiKeyStarter;
+
     public DataSeeder(UserRepository userRepository,
                       BankRepository bankRepository,
                       TransactionRepository transactionRepository,
@@ -67,8 +73,10 @@ public class DataSeeder {
             String recipientAccountNumber, String recipientBankCode,
             TransactionType type, TransactionStatus status,
             int daysAgo, Double riskScore, RiskLevel riskLevel,
-            String transactionReference
+            String reason, String transactionReference
     ) {}
+
+    private record SeededBankApiKey(String fullApiKey, String strippedApiKey, String hashedApiKey) {}
 
     private static SeedTransaction[] buildTransactionsToSeed() {
         List<SeedTransaction> seeds = new ArrayList<>();
@@ -80,53 +88,65 @@ public class DataSeeder {
                 "Abu Dhabi, UAE", "Birmingham, UK", "Chennai, IN", "Islamabad, PK"
         };
 
-        for (int i = 1; i <= 50; i++) {
-            String senderBankCode = senderBanks[(i - 1) % senderBanks.length];
-            TransactionType type = switch (i % 3) {
+        // 50 risk scores spread across 0.0–1.0
+        // Distribution: ~60% LOW (0.0–0.4), ~16% MEDIUM (0.5–0.6), ~24% HIGH (0.7–1.0)
+        // Matches RiskManagmentService.getLevel() thresholds and README fraud scoring table
+        double[] scores = {
+                0.0, 0.0, 0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.3, 0.3,
+                0.3, 0.4, 0.4, 0.4, 0.0, 0.1, 0.2, 0.3, 0.4, 0.0,
+                0.1, 0.2, 0.3, 0.0, 0.1, 0.2, 0.4, 0.3, 0.1, 0.2,
+                0.5, 0.5, 0.5, 0.6, 0.6, 0.6, 0.5, 0.6,
+                0.7, 0.7, 0.7, 0.8, 0.8, 0.8, 0.9, 0.9, 1.0, 0.7, 0.8, 0.9
+        };
+
+        for (int i = 0; i < 50; i++) {
+            int idx = i + 1;
+            double score = scores[i];
+
+            // Derive risk level from score — matches RiskManagmentService.getLevel()
+            RiskLevel riskLevel;
+            if (score >= 0.7) riskLevel = RiskLevel.HIGH;
+            else if (score >= 0.5) riskLevel = RiskLevel.MEDIUM;
+            else riskLevel = RiskLevel.LOW;
+
+            // Derive status from score — matches TransactionService.updateRiskScore()
+            TransactionStatus status = score >= Constants.RISKSCORE_THRESHOLD
+                    ? TransactionStatus.FLAGGED
+                    : TransactionStatus.COMPLETED;
+
+            // Derive reason from score — matches TransactionService.updateRiskScore()
+            String reason = score >= Constants.RISKSCORE_THRESHOLD
+                    ? "High risk transaction"
+                    : "Normal transaction";
+
+            String senderBankCode = senderBanks[i % senderBanks.length];
+            TransactionType type = switch (idx % 3) {
                 case 1 -> TransactionType.TRANSFER;
                 case 2 -> TransactionType.DEPOSIT;
                 default -> TransactionType.WITHDRAW;
             };
 
-            TransactionStatus status = switch (i % 4) {
-                case 1 -> TransactionStatus.COMPLETED;
-                case 2 -> TransactionStatus.PENDING;
-                case 3 -> TransactionStatus.FAILED;
-                default -> TransactionStatus.FLAGGED;
-            };
-
-            RiskLevel riskLevel = switch (status) {
-                case COMPLETED -> RiskLevel.LOW;
-                case PENDING -> RiskLevel.MEDIUM;
-                case FAILED, FLAGGED -> RiskLevel.HIGH;
-            };
-
-            Double riskScore = switch (riskLevel) {
-                case LOW -> 0.15;
-                case MEDIUM -> 0.45;
-                case HIGH -> 0.85;
-            };
-
-            String recipientAccountNumber = type == TransactionType.TRANSFER ? String.format("ACC2%04d", i) : null;
+            String recipientAccountNumber = type == TransactionType.TRANSFER ? String.format("ACC2%04d", idx) : null;
             String recipientBankCode = type == TransactionType.TRANSFER
                     ? recipientBanks[(i + 1) % recipientBanks.length]
                     : null;
 
-            BigDecimal amount = new BigDecimal(String.format("%d.%02d", 25 + ((i * 137) % 9750), (i * 17) % 100));
+            BigDecimal amount = new BigDecimal(String.format("%d.%02d", 25 + ((idx * 137) % 9750), (idx * 17) % 100));
 
             seeds.add(new SeedTransaction(
-                    String.format("ACC1%04d", i),
+                    String.format("ACC1%04d", idx),
                     senderBankCode,
-                    locations[(i - 1) % locations.length],
+                    locations[i % locations.length],
                     amount,
                     recipientAccountNumber,
                     recipientBankCode,
                     type,
                     status,
-                    50 - i,
-                    riskScore,
+                    50 - idx,
+                    score,
                     riskLevel,
-                    String.format("%s-REF-%04d", senderBankCode, i)
+                    reason,
+                    String.format("%s-REF-%04d", senderBankCode, idx)
             ));
         }
 
@@ -150,7 +170,45 @@ public class DataSeeder {
 
     private final List<Transaction> seededTransactions = new ArrayList<>();
     private final List<RiskManagement> seededRiskManagement = new ArrayList<>();
+    private final List<Bank> seededBanks = new ArrayList<>();
     private final Map<String, Bank> bankMap = new HashMap<>();
+
+    private void resolveBank(String bankName, String bankCode, boolean active, String hashedApiKey) {
+        bankMap.computeIfAbsent(bankCode, code ->
+                bankRepository.findByBankCode(code)
+                        .map(existing -> {
+                            existing.setBankName(bankName);
+                            existing.setActive(active);
+                            existing.setApiKey(hashedApiKey);
+                            Bank savedBank = bankRepository.save(existing);
+                            seededBanks.add(savedBank);
+                            return savedBank;
+                        })
+                        .orElseGet(() -> {
+                            Bank savedBank = bankRepository.save(
+                                    Bank.builder()
+                                            .bankName(bankName)
+                                            .bankCode(bankCode)
+                                            .active(active)
+                                            .apiKey(hashedApiKey)
+                                            .build()
+                            );
+                            seededBanks.add(savedBank);
+                            return savedBank;
+                        })
+        );
+    }
+
+    private SeededBankApiKey buildSeededBankApiKey() {
+        String fullApiKey = ApiFilterUtil.generateApiKey(bankApiKeyStarter);
+        String strippedApiKey = ApiFilterUtil.stripPrefix(fullApiKey, bankApiKeyStarter);
+
+        try {
+            return new SeededBankApiKey(fullApiKey, strippedApiKey, ApiFilterUtil.hashApiKey(strippedApiKey));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Unable to hash seeded bank API key", e);
+        }
+    }
 
     @Bean
     CommandLineRunner initDatabase(PasswordEncoder passwordEncoder) {
@@ -158,8 +216,13 @@ public class DataSeeder {
             long startTime = System.currentTimeMillis();
             StringBuilder logBuilder = new StringBuilder();
 
+            seededBanks.clear();
+            seededTransactions.clear();
+            seededRiskManagement.clear();
+            bankMap.clear();
+
             // Build the header for log
-            logBuilder.append('\n' + CYAN + "========================================================" + RESET + '\n')
+            logBuilder.append("\n").append(CYAN).append("========================================================").append(RESET).append('\n')
                     .append(CYAN + BOLD + "[VaultGuard] Starting Automated Local Seeding..." + RESET + '\n')
                     .append(CYAN + "========================================================" + RESET + '\n');
 
@@ -171,31 +234,43 @@ public class DataSeeder {
                 String bankCode = bankData[1];
                 boolean active = Boolean.parseBoolean(bankData[2]);
                 boolean isSeeded = false;
+                boolean isUpdated = false;
+                SeededBankApiKey seededBankApiKey = null;
 
                 try {
-                    Bank savedBank = bankRepository.save(
-                            Bank.builder()
-                                    .bankName(bankName)
-                                    .bankCode(bankCode)
-                                    .active(active)
-                                    .build()
-                    );
+                    boolean existed = bankRepository.findByBankCode(bankCode).isPresent();
+                    seededBankApiKey = buildSeededBankApiKey();
+                    resolveBank(bankName, bankCode, active, seededBankApiKey.hashedApiKey());
 
-                    totalBanks++;
-                    bankMap.put(bankCode, savedBank);
-                    isSeeded = true;
+                    if (!existed) {
+                        totalBanks++;
+                        isSeeded = true;
+                    } else {
+                        isUpdated = true;
+                    }
                 } catch (Exception ignored) {
                     // ignore the exceptions
                 }
 
                 String paddedName = String.format("%-20s", "'" + bankName + "'");
                 String paddedCode = String.format("%-14s", bankCode);
-                String status = isSeeded ? (GREEN + BOLD + "SEEDED" + RESET) : (RED + "SKIPPED (Exists)" + RESET);
+                String status = isSeeded
+                        ? (GREEN + BOLD + "SEEDED" + RESET)
+                        : isUpdated
+                        ? (GREEN + "UPDATED (Exists)" + RESET)
+                        : (RED + "FAILED" + RESET);
+
+                String fullApiKey = seededBankApiKey != null ? seededBankApiKey.fullApiKey() : "N/A";
+                String strippedApiKey = seededBankApiKey != null ? seededBankApiKey.strippedApiKey() : "N/A";
+                String hashedApiKey = seededBankApiKey != null ? seededBankApiKey.hashedApiKey() : "N/A";
 
                 logBuilder.append(String.format("Bank: %s%s%s Code: [%s%s%s] Active: %-5s Status: %s%n",
                         CYAN, paddedName, RESET,
                         YELLOW, paddedCode, RESET,
                         active, status));
+                logBuilder.append(String.format("  Full API Key     : %s%n", fullApiKey));
+                logBuilder.append(String.format("  Stripped API Key : %s%n", strippedApiKey));
+                logBuilder.append(String.format("  Hashed API Key   : %s%n", hashedApiKey));
             }
 
             /// ----------------------------------------------------------------------------------
@@ -208,15 +283,26 @@ public class DataSeeder {
 
                 try {
                     LocalDateTime txDate = LocalDateTime.now().minusDays(t.daysAgo());
+                    Bank senderBank = bankMap.get(t.senderBankCode());
+                    Bank recipientBank = t.recipientBankCode() != null ? bankMap.get(t.recipientBankCode()) : null;
+
+                    if (senderBank == null) {
+                        logBuilder.append(YELLOW)
+                                .append("Skipping transaction seed because sender bank was not resolved: ")
+                                .append(t.senderBankCode())
+                                .append(RESET)
+                                .append('\n');
+                        continue;
+                    }
 
                     Transaction transaction = Transaction.builder()
                             .senderAccountNumber(t.senderAccountNumber())
-                            .senderBank(bankMap.get(t.senderBankCode()))
+                            .senderBank(senderBank)
                             .senderLocation(t.senderLocation())
                             .transactionReference(t.transactionReference())
                             .amount(t.amount())
                             .recipientAccountNumber(t.recipientAccountNumber())
-                            .recipientBank(t.recipientBankCode() != null ? bankMap.get(t.recipientBankCode()) : null)
+                            .recipientBank(recipientBank)
                             .transactionType(t.type())
                             .transactionDate(txDate)
                             .build();
@@ -229,6 +315,7 @@ public class DataSeeder {
                             .riskScore(t.riskScore())
                             .riskLevel(t.riskLevel())
                             .transactionStatus(t.status())
+                            .reason(t.reason())
                             .createdAt(txDate)
                             .build();
 
@@ -242,7 +329,7 @@ public class DataSeeder {
                 }
             }
             String trxStatus = isTrxSeeded ? (GREEN + BOLD + "SEEDED" + RESET) : (RED + "SKIPPED" + RESET);
-            logBuilder.append(GREEN+"Transaction "+trxStatus + RESET + "\n");
+            logBuilder.append(GREEN).append("Transaction ").append(trxStatus).append(RESET).append("\n");
 
 
             // -----------------------------------------------------------------------------------
@@ -333,9 +420,7 @@ public class DataSeeder {
 
 
         try{
-            for (int i = 0; i < bankMap.size(); i++) {
-                bankRepository.delete(bankMap.get(banksToSeed[i][1]));
-            }
+            bankRepository.deleteAll(seededBanks);
         } catch (Exception e) {
             hasErrors = true;
             logBuilder.append(YELLOW).append("Error removing seeded banks: ").append(e.getMessage()).append(RESET).append('\n');

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.Map;
 
+@Slf4j
 @Component
 public class UserAccessDenial implements AccessDeniedHandler {
     private final ObjectMapper mapper;
@@ -21,6 +23,7 @@ public class UserAccessDenial implements AccessDeniedHandler {
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
+        log.error("[ERROR] Access denied: {}", accessDeniedException.getMessage());
         Map<String, Object> responseBody = Map.of(
                 "error", "Forbidden",
                 "message", accessDeniedException.getMessage(),

@@ -12,7 +12,9 @@ import com.guard.vaultguard.kafka.TransactionProducer;
 import com.guard.vaultguard.repositories.RiskManagmentRepository;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import com.guard.vaultguard.repositories.TransactionSpecification;
-import jakarta.transaction.Transactional;
+import com.guard.vaultguard.service.util.TransactionUtil;
+import lombok.AllArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -23,98 +25,79 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static com.guard.vaultguard.config.Constants.RISKSCORE_THRESHOLD;
 import static com.guard.vaultguard.config.Constants.MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS;
 
+
 @Service
 @Slf4j
+@AllArgsConstructor
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final StringRedisTemplate redisTemplate;
     private final TransactionProducer transactionProducer;
     private final BankService bankService;
+    private final TransactionUtil transactionUtil;
     private final RiskManagmentService riskManagmentService;
     private final RiskManagmentRepository riskManagmentRepository;
 
-    public TransactionService(TransactionRepository transactionRepository,
-                              RiskManagmentService riskManagmentService,
-                              StringRedisTemplate redisTemplate,
-                              TransactionProducer transactionProducer,
-                              BankService bankService, RiskManagmentRepository riskManagmentRepository)
-    {
-        this.transactionRepository = transactionRepository;
-        this.riskManagmentService = riskManagmentService;
-        this.redisTemplate = redisTemplate;
-        this.transactionProducer = transactionProducer;
-        this.bankService = bankService;
-        this.riskManagmentRepository = riskManagmentRepository;
-    }
-
-    @Transactional
     public Transaction processTransaction(TransactionRequest trx){
         if (!validateTransaction(trx)) throw new IllegalTransactionException("Invalid transaction data");
         if (!checkDuplicateTransaction(trx)) throw new DuplicateTransactionException("Duplicate transaction detected");
 
-        Transaction transaction = Transaction.builder()
-                .senderAccountNumber(trx.getSenderAccountNumber())
-                .senderBank(bankService.getBankByCode(trx.getSenderBankCode()))
-                .amount(trx.getAmount())
-                .transactionType(trx.getTransactionType())
-                .senderLocation(trx.getSenderLocation())
-                .recipientAccountNumber(trx.getRecipientAccountNumber())
-                .recipientBank(bankService.getBankByCode(trx.getRecipientBankCode()))
-                .transactionReference(trx.getBankTrxReference())
-
-                // default values when making a transaction
-                .transactionDate(LocalDateTime.now()).build();
-
         try {
-            Transaction savedTransaction = transactionRepository.save(transaction);
+            Transaction returnedTransaction = transactionUtil.saveTransaction(trx);
+            transactionProducer.sendTransaction(returnedTransaction);
+            log.info("[INFO] Transaction saved with ID: {}, and sent to Kafka", returnedTransaction.getId());
+            return returnedTransaction;
 
-            log.info("[INFO] Transaction saved with ID: {}", savedTransaction.getId());
-            transactionProducer.sendTransaction(savedTransaction);
-
-            return savedTransaction;
-        }
-        catch (DataIntegrityViolationException e) {
-            // return the data  DB
-            log.info("[INFO] Duplicate transaction detected for reference: {}", trx.getBankTrxReference(), e);
-            return transactionRepository.findByTransactionReference(trx.getBankTrxReference())
-                    .orElseThrow(() -> new IllegalTransactionException("Duplicate transaction detected but not found in DB"));
+        } catch (DataIntegrityViolationException ex){
+            log.warn("[WARN] Data integrity violation while saving transaction: {}", ex.getMessage());
+            return transactionUtil.getTransactionByReference(trx.getBankTrxReference());
         }
     }
 
     public Page<Transaction> getAllTransactions(String bankCode, String status,
-                                                String riskLevel, Pageable pageable) {
+                                                String riskLevel, String transactionType,
+                                                String dateFrom, String dateTo,
+                                                Pageable pageable) {
+        // sanitise the input parameters to ensure they are in a consistent format for comparison
         String normalisedBankCode = bankCode != null ? bankCode.trim().toUpperCase() : null;
         String normalisedStatus = status != null ? status.trim().toUpperCase() : null;
         String normalisedRiskLevel = riskLevel != null ? riskLevel.trim().toUpperCase() : null;
+        String normalisedTransactionType = transactionType != null ? transactionType.trim().toUpperCase() : null;
+        String normalisedDateFrom = dateFrom != null ? dateFrom.trim() : null;
+        String normalisedDateTo = dateTo != null ? dateTo.trim() : null;
 
-        RiskLevel trxRiskLevel = null;
-        TransactionStatus trxStatus = null;
+        // parse the enums and throw exceptions if invalid values are provided
+        RiskLevel trxRiskLevel = parseEnum(RiskLevel.class, normalisedRiskLevel,
+                () -> new IllegalRiskLevelException("Invalid risk level: " + normalisedRiskLevel));
+        TransactionStatus trxStatus = parseEnum(TransactionStatus.class, normalisedStatus,
+                () -> new IllegalTransactionStatusException("Invalid transaction status: " + normalisedStatus));
+        TransactionType trxType = parseEnum(TransactionType.class, normalisedTransactionType,
+                () -> new IllegalTransactionTypeException("Invalid transaction type: " + normalisedTransactionType));
 
-        if (normalisedRiskLevel != null) {
-            try {
-                trxRiskLevel = RiskLevel.valueOf(normalisedRiskLevel);
-            } catch (IllegalArgumentException e) {
-                log.warn("[WARN] Invalid risk level provided: {}", normalisedRiskLevel);
-                throw new IllegalRiskLevelException("Invalid risk level: " + normalisedRiskLevel);
-            }
-        }
+        // Format the date from and to
+        LocalDateTime dateFromParsed = parseDateTime(normalisedDateFrom, LocalDate::atStartOfDay);
+        LocalDateTime dateToParsed = parseDateTime(normalisedDateTo, localDate ->  localDate.atTime(LocalTime.MAX));
 
-        if (normalisedStatus != null) {
-            try {
-                trxStatus = TransactionStatus.valueOf(normalisedStatus);
-            } catch (IllegalArgumentException e) {
-                log.warn("[WARN] Invalid transaction status provided: {}", normalisedStatus);
-                throw new IllegalTransactionStatusException("Invalid transaction status: " + normalisedStatus);
-            }
+        // check the date range is valid, if both dates are provided
+        if (dateFromParsed != null && dateToParsed != null && dateFromParsed.isAfter(dateToParsed)) {
+            throw new IllegalArgumentException("Invalid date range: 'dateFrom' cannot be after 'dateTo'");
+        } else if (dateFromParsed != null && dateToParsed != null && dateToParsed.isBefore(dateFromParsed)) {
+            throw new IllegalArgumentException("Invalid date range: 'dateTo' cannot be before 'dateFrom'");
         }
 
         // create default sorting
@@ -135,6 +118,12 @@ public class TransactionService {
             specs = specs.and(TransactionSpecification.hasTransactionStatus(trxStatus));
         if (trxRiskLevel != null)
             specs = specs.and(TransactionSpecification.hasTransactionRiskLevel(trxRiskLevel));
+        if (trxType != null)
+            specs = specs.and(TransactionSpecification.hasTransactionType(trxType));
+        if (dateFromParsed != null)
+            specs = specs.and(TransactionSpecification.hasTransactionDateFrom(dateFromParsed));
+        if (dateToParsed != null)
+            specs = specs.and(TransactionSpecification.hasTransactionDateTo(dateToParsed));
 
         return transactionRepository.findAll(specs, pageable);
     }
@@ -222,12 +211,13 @@ public class TransactionService {
         // also to pretect from duploicates we can use the bankTrxReference as a unique key for each transaction
 
         // since each transaction from bank has a unique reference, we can use that as a key to check for duplicates
+        // key -> "idempotency:{senderBankCode}:{bankTrxReference}"
         String redisKey = "idempotency:" + trxReq.getSenderBankCode() + ":" + trxReq.getBankTrxReference();
         String redisValue = UUID.randomUUID().toString();
 
-        Boolean isDuplicate = redisTemplate.opsForValue().setIfAbsent(redisKey, redisValue, 2, TimeUnit.MINUTES);
-
-        return isDuplicate != null && isDuplicate;
+        Boolean isUnique = redisTemplate.opsForValue().setIfAbsent(redisKey, redisValue, 2, TimeUnit.MINUTES);
+        // returns TRUE if created, FALSE if exists
+        return isUnique != null && isUnique;
     }
 
     private Long getCurrentTimeStamp_Millis(){
@@ -254,6 +244,31 @@ public class TransactionService {
         if (trx.getAmount() == null || trx.getAmount().doubleValue() <= 0) return false;
 
         return trx.getSenderLocation() != null && !trx.getSenderLocation().isEmpty();
+    }
+
+    // This method is a generic utility to parse a string into an enum value of the specified type. If the parsing fails, it throws a custom exception provided by the exceptionSupplier.
+    // can keep is static for utility class, but here we keep it private for this service class
+    private <T extends Enum<T>> T parseEnum(Class<T> enumType, String value, Supplier<RuntimeException> exceptionSupplier ) {
+        if (value == null ) return null;
+        if (value.isEmpty()) throw exceptionSupplier.get();
+
+        try {
+            return Enum.valueOf(enumType, value);
+        } catch (IllegalArgumentException e) {
+            throw exceptionSupplier.get();
+        }
+    }
+
+    private LocalDateTime parseDateTime(String date, Function<LocalDate, LocalDateTime> function) {
+        if (date == null) return null;
+        if (date.isEmpty()) throw new IllegalArgumentException("Date cannot be empty: " + date);
+
+        try {
+            LocalDate localDate = LocalDate.parse(date);
+            return function.apply(localDate);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("Invalid date format: " + date, e);
+        }
     }
 
 }

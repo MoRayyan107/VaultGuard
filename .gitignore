@@ -41,3 +41,7 @@ payload.json
 
 # Redis Dump
 dump.rdb
+
+# graphify
+graphify-out/
+.agent

@@ -22,7 +22,7 @@ function Login() {
 
         try{
             // get the login response from the backend API
-            const loginResponse = await api.post("/api/auth/login", {
+            const loginResponse = await api.post("/api/v1/auth/login", {
                 username, password
             });
 

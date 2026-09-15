@@ -4,6 +4,7 @@ import com.guard.vaultguard.dto.users.UserRequest;
 import com.guard.vaultguard.dto.users.UserResponse;
 import com.guard.vaultguard.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,7 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
+@Slf4j
 public class AuthenticationController {
 
     private final UserService userService;
@@ -26,6 +28,8 @@ public class AuthenticationController {
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody UserRequest userRequest, HttpServletResponse response) {
+        log.info("Login request received for user: {}", userRequest.getUsername());
+        // TODO: remove Log
         UserResponse res = userService.verifyUserOnLogin(userRequest, response);
 
         return ResponseEntity.ok(UserResponse.buildUserResponse(HttpStatus.OK, res, "Login Successful"));

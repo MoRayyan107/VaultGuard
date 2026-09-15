@@ -1,14 +1,14 @@
 package com.guard.vaultguard.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.guard.vaultguard.security.jwt.JwtAuthenticationEntryPoint;
-import com.guard.vaultguard.security.jwt.JwtAuthenticationFilter;
-import com.guard.vaultguard.security.rateLimiting.IpRateLimitingFilter;
-import com.guard.vaultguard.security.rateLimiting.UserRateLimitingFilter;
+import com.guard.vaultguard.security.Filters.*;
 import com.guard.vaultguard.security.userSecurity.UserAccessDenial;
 import com.guard.vaultguard.security.userSecurity.UserDetailServiceImpl;
+import com.guard.vaultguard.security.util.JwtAuthenticationEntryPoint;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -16,6 +16,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +34,7 @@ import java.util.List;
 
 import static com.guard.vaultguard.config.Constants.PUBLIC_ENDPOINTS;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
@@ -43,26 +45,45 @@ public class SecurityConfig {
     private final UserDetailServiceImpl userDetailService;
     private final IpRateLimitingFilter ipRateLimitingFilter;
     private final UserRateLimitingFilter userRateLimitingFilter;
+    private final ApiFilter apiFilter;
 
     public SecurityConfig(UserDetailServiceImpl userDetailService,
                           JwtAuthenticationFilter jwtFilter,
                           IpRateLimitingFilter ipRateLimitingFilter,
+                          ApiFilter apiFilter,
                           ObjectMapper mapper, UserRateLimitingFilter userRateLimitingFilter)
     {
         this.mapper = mapper;
         this.jwtFilter = jwtFilter;
+        this.apiFilter = apiFilter;
         this.userDetailService = userDetailService;
         this.ipRateLimitingFilter = ipRateLimitingFilter;
         this.userRateLimitingFilter = userRateLimitingFilter;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain bankSecurityFilterChain(HttpSecurity http) throws Exception {
+        log.info("[INFO] Configuring SecurityFilterChain for bank API endpoints");
+        return http
+                .securityMatcher("api/v1/proccess/**") // we want only this endpoint to be used by this filter cchain
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .addFilterBefore(apiFilter, UsernamePasswordAuthenticationFilter.class) // Add before we cchecck the token
+                .build();
+    }
+
+    @Bean
+    @Order(2)
+    public SecurityFilterChain userSecurityFilterChain(HttpSecurity http) throws Exception {
 
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         requestHandler.setCsrfRequestAttributeName(null);
 
         return http
+                .securityMatcher("api/v1/**") // allow all request to be authenticated
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(requestHandler)
@@ -77,7 +98,7 @@ public class SecurityConfig {
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(ipRateLimitingFilter, JwtAuthenticationFilter.class) // Add before we cchecck the token
                 .addFilterAfter(userRateLimitingFilter, JwtAuthenticationFilter.class) // Add after we check the token, so we can get the user from the token and rate limit based on user
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtEntryPoint()))  // authentication entry point for 401's
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(entryPoint()))  // authentication entry point for 401's
                 .exceptionHandling(ex -> ex.accessDeniedHandler(userAccessDenialHandler()))  // access denied handler for 403's
                 .build();
 
@@ -108,7 +129,7 @@ public class SecurityConfig {
 
     // had issues with 403 and 401 errors, this is the entry point for unauthenticated requests, returns 401 with json response
     @Bean
-    public AuthenticationEntryPoint jwtEntryPoint() {
+    public AuthenticationEntryPoint entryPoint() {
         return new JwtAuthenticationEntryPoint(mapper);
     }
 

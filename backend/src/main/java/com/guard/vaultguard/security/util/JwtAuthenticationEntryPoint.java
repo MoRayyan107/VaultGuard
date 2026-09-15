@@ -1,4 +1,4 @@
-package com.guard.vaultguard.security.jwt;
+package com.guard.vaultguard.security.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;

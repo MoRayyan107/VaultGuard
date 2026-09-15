@@ -25,7 +25,7 @@ public abstract class AbstractRateLimiting {
     protected Bucket resolveBucket(String prefixKey, String key, int capacity, long refillIntervals, int refillTokens) {
         String storageKey = prefixKey + key;
         return proxyManager.builder()
-                .build(key, () -> bucketConfig(capacity, refillIntervals, refillTokens));
+                .build(storageKey, () -> bucketConfig(capacity, refillIntervals, refillTokens));
     }
 
     /**

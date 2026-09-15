@@ -1,6 +1,10 @@
-package com.guard.vaultguard.security.jwt;
+package com.guard.vaultguard.security.Filters;
 
+import com.guard.vaultguard.security.util.JwtUtil;
 import com.guard.vaultguard.security.userSecurity.UserDetailServiceImpl;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -11,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -54,7 +59,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         // if the username is not null and user is not authenticated in context
-        if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (token != null && !token.isEmpty() && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 username = jwtUtil.extractUsername(token); // extract the username from the token
 
@@ -70,8 +75,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                     }
                 }
-            } catch (Exception e) {
-                // log the error and continue the filter chain without authentication
+            } catch (IllegalArgumentException e) {
+                // token is null or empty — log and continue without authentication
+                log.error("Unable to get JWT token for request: {}", request.getRequestURI());
+            }
+            catch (ExpiredJwtException e) {
+                // token is expired — clear it and continue without authentication
+                log.warn("Expired JWT token for request: {}", request.getRequestURI());
+            } catch (UsernameNotFoundException | MalformedJwtException | SignatureException e) {
+                // invalid token — log and continue without authentication
                 log.error("Error during JWT authentication: {}", e.getMessage());
             }
         }

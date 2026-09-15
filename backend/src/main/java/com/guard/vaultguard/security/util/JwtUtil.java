@@ -1,4 +1,4 @@
-package com.guard.vaultguard.security.jwt;
+package com.guard.vaultguard.security.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -42,8 +42,8 @@ public class JwtUtil {
 
     public boolean validateToken(String token, UserDetails userDetails)
     {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isExpired(token));
+        final String tokenUsername = extractUsername(token);
+        return (tokenUsername.equals(userDetails.getUsername()) && !isExpired(token));
     }
 
     public String extractUsername(String token) {
