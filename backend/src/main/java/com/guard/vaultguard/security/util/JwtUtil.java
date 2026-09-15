@@ -1,4 +1,4 @@
-package com.guard.vaultguard.security.jwt;
+package com.guard.vaultguard.security.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

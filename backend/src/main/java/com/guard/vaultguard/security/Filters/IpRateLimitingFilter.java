@@ -1,5 +1,6 @@
-package com.guard.vaultguard.security.rateLimiting;
+package com.guard.vaultguard.security.Filters;
 
+import com.guard.vaultguard.security.util.RateLimitUtil;
 import com.guard.vaultguard.service.rateLimiting.IpRateLimitingService;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
@@ -16,9 +17,9 @@ import java.io.IOException;
 public class IpRateLimitingFilter extends OncePerRequestFilter {
 
     private final IpRateLimitingService ipRateLimitingService;
-    private final Util ipRateLimitingUtil;
+    private final RateLimitUtil ipRateLimitingUtil;
 
-    public IpRateLimitingFilter(IpRateLimitingService ipRateLimitingService, Util ipRateLimitingUtil) {
+    public IpRateLimitingFilter(IpRateLimitingService ipRateLimitingService, RateLimitUtil ipRateLimitingUtil) {
         this.ipRateLimitingService = ipRateLimitingService;
         this.ipRateLimitingUtil = ipRateLimitingUtil;
     }

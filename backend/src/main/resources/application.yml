@@ -63,6 +63,10 @@ app:
       refill-tokens: ${USER_TOKEN_REFILL_RATE}
       refill-period: ${USER_REFILL_DURATION_MILLISECONDS}
 
+bank:
+  api:
+    key:
+      starter: ${BANK_API_KEY_STARTER}
 
 logging:
   pattern:

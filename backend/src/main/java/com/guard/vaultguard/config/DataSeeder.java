@@ -12,15 +12,18 @@ import com.guard.vaultguard.repositories.BankRepository;
 import com.guard.vaultguard.repositories.RiskManagmentRepository;
 import com.guard.vaultguard.repositories.TransactionRepository;
 import com.guard.vaultguard.repositories.UserRepository;
+import com.guard.vaultguard.security.util.ApiFilterUtil;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,6 +53,9 @@ public class DataSeeder {
     private final TransactionRepository transactionRepository;
     private final RiskManagmentRepository riskManagmentRepository;
 
+    @Value("${bank.api.key.starter}")
+    private String bankApiKeyStarter;
+
     public DataSeeder(UserRepository userRepository,
                       BankRepository bankRepository,
                       TransactionRepository transactionRepository,
@@ -69,6 +75,8 @@ public class DataSeeder {
             int daysAgo, Double riskScore, RiskLevel riskLevel,
             String reason, String transactionReference
     ) {}
+
+    private record SeededBankApiKey(String fullApiKey, String strippedApiKey, String hashedApiKey) {}
 
     private static SeedTransaction[] buildTransactionsToSeed() {
         List<SeedTransaction> seeds = new ArrayList<>();
@@ -165,21 +173,41 @@ public class DataSeeder {
     private final List<Bank> seededBanks = new ArrayList<>();
     private final Map<String, Bank> bankMap = new HashMap<>();
 
-    private Bank resolveBank(String bankName, String bankCode, boolean active) {
-        return bankMap.computeIfAbsent(bankCode, code ->
+    private void resolveBank(String bankName, String bankCode, boolean active, String hashedApiKey) {
+        bankMap.computeIfAbsent(bankCode, code ->
                 bankRepository.findByBankCode(code)
+                        .map(existing -> {
+                            existing.setBankName(bankName);
+                            existing.setActive(active);
+                            existing.setApiKey(hashedApiKey);
+                            Bank savedBank = bankRepository.save(existing);
+                            seededBanks.add(savedBank);
+                            return savedBank;
+                        })
                         .orElseGet(() -> {
                             Bank savedBank = bankRepository.save(
                                     Bank.builder()
                                             .bankName(bankName)
                                             .bankCode(bankCode)
                                             .active(active)
+                                            .apiKey(hashedApiKey)
                                             .build()
                             );
                             seededBanks.add(savedBank);
                             return savedBank;
                         })
         );
+    }
+
+    private SeededBankApiKey buildSeededBankApiKey() {
+        String fullApiKey = ApiFilterUtil.generateApiKey(bankApiKeyStarter);
+        String strippedApiKey = ApiFilterUtil.stripPrefix(fullApiKey, bankApiKeyStarter);
+
+        try {
+            return new SeededBankApiKey(fullApiKey, strippedApiKey, ApiFilterUtil.hashApiKey(strippedApiKey));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Unable to hash seeded bank API key", e);
+        }
     }
 
     @Bean
@@ -206,14 +234,19 @@ public class DataSeeder {
                 String bankCode = bankData[1];
                 boolean active = Boolean.parseBoolean(bankData[2]);
                 boolean isSeeded = false;
+                boolean isUpdated = false;
+                SeededBankApiKey seededBankApiKey = null;
 
                 try {
                     boolean existed = bankRepository.findByBankCode(bankCode).isPresent();
-                    Bank savedBank = resolveBank(bankName, bankCode, active);
+                    seededBankApiKey = buildSeededBankApiKey();
+                    resolveBank(bankName, bankCode, active, seededBankApiKey.hashedApiKey());
 
                     if (!existed) {
                         totalBanks++;
                         isSeeded = true;
+                    } else {
+                        isUpdated = true;
                     }
                 } catch (Exception ignored) {
                     // ignore the exceptions
@@ -221,12 +254,23 @@ public class DataSeeder {
 
                 String paddedName = String.format("%-20s", "'" + bankName + "'");
                 String paddedCode = String.format("%-14s", bankCode);
-                String status = isSeeded ? (GREEN + BOLD + "SEEDED" + RESET) : (RED + "SKIPPED (Exists)" + RESET);
+                String status = isSeeded
+                        ? (GREEN + BOLD + "SEEDED" + RESET)
+                        : isUpdated
+                        ? (GREEN + "UPDATED (Exists)" + RESET)
+                        : (RED + "FAILED" + RESET);
+
+                String fullApiKey = seededBankApiKey != null ? seededBankApiKey.fullApiKey() : "N/A";
+                String strippedApiKey = seededBankApiKey != null ? seededBankApiKey.strippedApiKey() : "N/A";
+                String hashedApiKey = seededBankApiKey != null ? seededBankApiKey.hashedApiKey() : "N/A";
 
                 logBuilder.append(String.format("Bank: %s%s%s Code: [%s%s%s] Active: %-5s Status: %s%n",
                         CYAN, paddedName, RESET,
                         YELLOW, paddedCode, RESET,
                         active, status));
+                logBuilder.append(String.format("  Full API Key     : %s%n", fullApiKey));
+                logBuilder.append(String.format("  Stripped API Key : %s%n", strippedApiKey));
+                logBuilder.append(String.format("  Hashed API Key   : %s%n", hashedApiKey));
             }
 
             /// ----------------------------------------------------------------------------------
@@ -285,7 +329,7 @@ public class DataSeeder {
                 }
             }
             String trxStatus = isTrxSeeded ? (GREEN + BOLD + "SEEDED" + RESET) : (RED + "SKIPPED" + RESET);
-            logBuilder.append(GREEN+"Transaction "+trxStatus + RESET + "\n");
+            logBuilder.append(GREEN).append("Transaction ").append(trxStatus).append(RESET).append("\n");
 
 
             // -----------------------------------------------------------------------------------

@@ -1,5 +1,6 @@
-package com.guard.vaultguard.security.rateLimiting;
+package com.guard.vaultguard.security.Filters;
 
+import com.guard.vaultguard.security.util.RateLimitUtil;
 import com.guard.vaultguard.service.rateLimiting.UserRateLimitingService;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
@@ -20,9 +21,9 @@ import static com.guard.vaultguard.config.Constants.AUTH_ENDPOINT_FOR_RATE_LIMIT
 public class UserRateLimitingFilter extends OncePerRequestFilter {
 
     private final UserRateLimitingService userRateLimitingService;
-    private final Util rateLimiterUtil;
+    private final RateLimitUtil rateLimiterUtil;
 
-    public UserRateLimitingFilter(UserRateLimitingService userRateLimitingService, Util rateLimiterUtil){
+    public UserRateLimitingFilter(UserRateLimitingService userRateLimitingService, RateLimitUtil rateLimiterUtil){
         this.userRateLimitingService = userRateLimitingService;
         this.rateLimiterUtil = rateLimiterUtil;
     }

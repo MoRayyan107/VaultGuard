@@ -1,5 +1,6 @@
-package com.guard.vaultguard.security.jwt;
+package com.guard.vaultguard.security.Filters;
 
+import com.guard.vaultguard.security.util.JwtUtil;
 import com.guard.vaultguard.security.userSecurity.UserDetailServiceImpl;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;

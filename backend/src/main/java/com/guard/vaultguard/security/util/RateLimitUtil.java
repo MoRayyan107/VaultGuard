@@ -1,4 +1,4 @@
-package com.guard.vaultguard.security.rateLimiting;
+package com.guard.vaultguard.security.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bucket4j.Bucket;
@@ -14,11 +14,11 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
-public class Util {
+public class RateLimitUtil {
 
     private final ObjectMapper objectMapper;
 
-    public Util(ObjectMapper objectMapper) {
+    public RateLimitUtil(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
         log.info("[INFO] Util class initialized");
     }

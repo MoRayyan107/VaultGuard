@@ -55,6 +55,11 @@ app:
       refill-tokens: 1
       refill-period: 1000
 
+bank:
+  api:
+    key:
+      starter: some_starter_key
+
 logging:
   pattern:
     # pattern -> [Thread] [Level] - Message

@@ -7,6 +7,7 @@ import com.guard.vaultguard.repositories.BankRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class BankService {
@@ -27,5 +28,9 @@ public class BankService {
 
     public List<Bank> getActiveBanks(boolean status) {
         return bankRepository.findByActive(status);
+    }
+
+    public Optional<Bank> getBankByApiKey(String apiKey) {
+        return bankRepository.findBankByApiKey(apiKey);
     }
 }

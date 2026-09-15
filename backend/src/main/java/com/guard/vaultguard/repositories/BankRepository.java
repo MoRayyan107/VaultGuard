@@ -13,4 +13,6 @@ public interface BankRepository extends JpaRepository<Bank, UUID> {
 
     List<Bank> findByActive(boolean active);
 
+    Optional<Bank> findBankByApiKey(String apiKey);
+
 }
