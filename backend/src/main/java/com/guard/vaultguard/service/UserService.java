@@ -77,7 +77,6 @@ public class UserService{
 
     public UserResponse verifyUserOnLogin(UserRequest request, HttpServletResponse response) {
         if (!validateUserInputs(request)) throw new InvalidUserDataException("Username or Password is empty");
-        log.info("[INFO] Attempting to authenticate user: {}", request.getUsername());
         try {
             Authentication auth = authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
@@ -88,7 +87,6 @@ public class UserService{
             if (!UserRole.MANAGER.name().equalsIgnoreCase(authenticated.getRole()) &&
                 !UserRole.ANALYST.name().equalsIgnoreCase(authenticated.getRole()))
             {
-                log.warn("[WARN] User is not a manager or analyst: {}", authenticated.getUsername());
                 throw new InvalidCredentialException("User is not based on designated roles for this resource");
             }
 
@@ -104,7 +102,6 @@ public class UserService{
                     .sameSite("Strict")
                     .build();
             response.addHeader(HttpHeaders.SET_COOKIE, newCookie.toString());
-            log.info("[INFO] User authenticated successfully: {}", username);
 
             return buildUserResponse(username, role);
         } catch (BadCredentialsException e) {
@@ -132,7 +129,6 @@ public class UserService{
         UserResponse.UserResponseBuilder res = UserResponse.builder()
                 .username(username)
                 .role(role);
-        log.info("[INFO] User {} has been authenticated successfully: {}", username, role);
 
         return res.build();
     }

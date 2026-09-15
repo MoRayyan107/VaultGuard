@@ -17,7 +17,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@Slf4j
 public class AuthenticationController {
 
     private final UserService userService;
@@ -28,8 +27,7 @@ public class AuthenticationController {
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody UserRequest userRequest, HttpServletResponse response) {
-        log.info("Login request received for user: {}", userRequest.getUsername());
-        // TODO: remove Log
+
         UserResponse res = userService.verifyUserOnLogin(userRequest, response);
 
         return ResponseEntity.ok(UserResponse.buildUserResponse(HttpStatus.OK, res, "Login Successful"));

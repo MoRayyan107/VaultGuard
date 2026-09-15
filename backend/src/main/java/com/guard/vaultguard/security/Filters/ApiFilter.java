@@ -23,8 +23,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Optional;
 
-@Component
 @Slf4j
+@Component
 public class ApiFilter extends OncePerRequestFilter {
 
     private static final String BANK_API_PATH_PREFIX = "/api/v1/proccess/";
@@ -51,10 +51,8 @@ public class ApiFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
-        log.info("[INFO] ApiFilter: Filtering request for URI: {}", request.getRequestURI());
         // get from headers if thers an existing header named "X-API-KEY"
         String apiKey = request.getHeader("X-API-KEY");
-        log.info("[INFO] ApiFilter: Retrieved API Key from header: {}", apiKey);
 
         // if the header is missing manually make a 403 respionse and return
         if (apiKey == null || apiKey.isEmpty()) {
@@ -65,7 +63,6 @@ public class ApiFilter extends OncePerRequestFilter {
                     "message", "Missing API Key",
                     "path", request.getRequestURI()
             )));
-            log.info("[INFO] ApiFilter: Filtering request for URI: {}", request.getRequestURI()+ "Failed due to missing API Key");
             return;
         }
 
@@ -78,7 +75,6 @@ public class ApiFilter extends OncePerRequestFilter {
                 }
                 String hashedApiKey = ApiFilterUtil.hashApiKey(apiKey);
 
-                log.info("[INFO] ApiFilter: Hashed API Key: {}", hashedApiKey);
                 // fetcch from the DB and compare with the hashed api key
                 Optional<Bank> bank = bankService.getBankByApiKey(hashedApiKey);
 
@@ -90,7 +86,6 @@ public class ApiFilter extends OncePerRequestFilter {
                             "message", "Invalid API Key",
                             "path", request.getRequestURI()
                     )));
-                    log.info("[INFO] ApiFilter: Filtering request for URI: {}", request.getRequestURI()+ "Failed due to invalid API Key");
                     return;
                 }
 
@@ -103,7 +98,6 @@ public class ApiFilter extends OncePerRequestFilter {
                             "message", "Bank is not active",
                             "path", request.getRequestURI()
                     )));
-                    log.info("[INFO] ApiFilter: Filtering request for URI: {}", request.getRequestURI()+ "Failed due to bank not active");
                     return;
                 }
 
@@ -114,10 +108,8 @@ public class ApiFilter extends OncePerRequestFilter {
                 Authentication authToken = new UsernamePasswordAuthenticationToken(
                         bankPrincipal, null, bankPrincipal.getAuthorities()
                 );
-                log.info("[INFO] ApiFilter: Setting authentication in security context for URI: {}", request.getRequestURI());
                 // set the seccurity ccontext)
                 SecurityContextHolder.getContext().setAuthentication(authToken);
-                log.info("[INFO] ApiFilter: Setting authentication in security context");
             } catch (NoSuchAlgorithmException e) {
                 // Handle the exception
                 log.warn("[WARN] Error hashing API key: {}", e.getMessage());
@@ -125,7 +117,6 @@ public class ApiFilter extends OncePerRequestFilter {
         }
 
         // finally once everything is secure then filter
-        log.info("[INFO] ApiFilter: Filtering request for URI: {}", request.getRequestURI()+ "Passed");
         filterChain.doFilter(request, response);
     }
 
