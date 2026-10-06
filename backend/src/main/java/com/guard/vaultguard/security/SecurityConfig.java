@@ -64,9 +64,8 @@ public class SecurityConfig {
     @Bean
     @Order(1)
     public SecurityFilterChain bankSecurityFilterChain(HttpSecurity http) throws Exception {
-        log.info("[INFO] Configuring SecurityFilterChain for bank API endpoints");
         return http
-                .securityMatcher("api/v1/proccess/**") // we want only this endpoint to be used by this filter cchain
+                .securityMatcher("/api/v1/process/**") // this chain must match the real process endpoint
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

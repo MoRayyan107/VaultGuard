@@ -27,7 +27,7 @@ import java.util.Optional;
 @Component
 public class ApiFilter extends OncePerRequestFilter {
 
-    private static final String BANK_API_PATH_PREFIX = "/api/v1/proccess/";
+    private static final String BANK_API_PATH_PREFIX = "/api/v1/process/";
 
     private final BankService bankService;
     private final ObjectMapper objectMapper;
@@ -74,6 +74,7 @@ public class ApiFilter extends OncePerRequestFilter {
                     apiKey = apiKey.substring(bankApiKeyStarter.length()); // strips the prefix from the api key
                 }
                 String hashedApiKey = ApiFilterUtil.hashApiKey(apiKey);
+                log.info("[INFO] Hashed API Key: {}", hashedApiKey);
 
                 // fetcch from the DB and compare with the hashed api key
                 Optional<Bank> bank = bankService.getBankByApiKey(hashedApiKey);
@@ -110,12 +111,12 @@ public class ApiFilter extends OncePerRequestFilter {
                 );
                 // set the seccurity ccontext)
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+
             } catch (NoSuchAlgorithmException e) {
                 // Handle the exception
                 log.warn("[WARN] Error hashing API key: {}", e.getMessage());
             }
         }
-
         // finally once everything is secure then filter
         filterChain.doFilter(request, response);
     }

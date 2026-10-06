@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import static com.guard.vaultguard.config.Constants.AUTH_ENDPOINT_FOR_RATE_LIMITING_SKIP;
 
@@ -33,9 +34,9 @@ public class UserRateLimitingFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        // skipp the rate limiter for Swagger
+        // skip the rate limiter for configured auth/public endpoints
         String urlPath = request.getRequestURI();
-        if (urlPath.startsWith(AUTH_ENDPOINT_FOR_RATE_LIMITING_SKIP))
+        if (Arrays.asList(AUTH_ENDPOINT_FOR_RATE_LIMITING_SKIP).contains(urlPath))
         {
             filterChain.doFilter(request, response);
             return;

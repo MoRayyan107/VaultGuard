@@ -172,6 +172,42 @@ From `backend/scripts/`:
 - `run-script.sh` tests authenticated transaction submission and rate limiting
 - `auth-test.sh` stress tests login/register flows
 
+## Load Test Results
+
+The transaction processing endpoint was load-tested with Locust against:
+
+- `POST /api/v1/process/fraudDetection/transaction`
+
+Latest run summary:
+
+| Metric | Value |
+|---|---:|
+| Total requests | 59,712 |
+| Failures | 0 (0.00%) |
+| Average response time | 182 ms |
+| Minimum response time | 6 ms |
+| Maximum response time | 986 ms |
+| Median response time | 180 ms |
+| Requests/sec | 379.75 |
+
+### Response time percentiles
+
+| Percentile | ms |
+|---|---:|
+| 50% | 180 |
+| 66% | 220 |
+| 75% | 240 |
+| 80% | 260 |
+| 90% | 290 |
+| 95% | 330 |
+| 98% | 390 |
+| 99% | 430 |
+| 99.9% | 670 |
+| 99.99% | 850 |
+| 100% | 990 |
+
+The test was manually interrupted with `KeyboardInterrupt` after collecting the above metrics, so the summary reflects the completed requests up to that point.
+
 ## Main API Endpoints
 
 ### Auth

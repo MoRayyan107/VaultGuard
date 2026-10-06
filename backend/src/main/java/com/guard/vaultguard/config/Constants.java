@@ -17,7 +17,10 @@ public final class Constants {
             "/swagger-ui.html"
     };
 
-    public static String AUTH_ENDPOINT_FOR_RATE_LIMITING_SKIP = "/api/v1/auth/logout";
+    public final static String[] AUTH_ENDPOINT_FOR_RATE_LIMITING_SKIP = {
+            "/api/v1/bank/register",
+            "/api/v1/process/fraudDetection/transaction" // bank API endpoints are not rate limited for now
+    };
 
     // Service
     public final static Integer MAX_TIME_DIFF_LOCATION_CHANGE_SECONDS = 300; // 5 minutes

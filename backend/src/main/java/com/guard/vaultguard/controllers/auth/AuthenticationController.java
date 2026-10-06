@@ -34,7 +34,7 @@ public class AuthenticationController {
 
     }
 
-    @PreAuthorize("hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasRole('MANAGER')")
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody UserRequest userRequest) {
 

@@ -12,6 +12,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
+
+import static com.guard.vaultguard.config.Constants.AUTH_ENDPOINT_FOR_RATE_LIMITING_SKIP;
 
 @Component
 public class IpRateLimitingFilter extends OncePerRequestFilter {
@@ -28,6 +31,14 @@ public class IpRateLimitingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
+        // skip the rate limiter for configured auth/public endpoints
+        String urlPath = request.getRequestURI();
+        if (Arrays.asList(AUTH_ENDPOINT_FOR_RATE_LIMITING_SKIP).contains(urlPath))
+        {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // extract clients IP
         String clientIp = getClientIp(request);
 
