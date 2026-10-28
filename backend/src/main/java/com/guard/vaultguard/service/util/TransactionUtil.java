@@ -20,6 +20,7 @@ public class TransactionUtil {
     private final TransactionRepository transactionRepository;
     private final BankService bankService;
 
+    // propagation = Propagation.REQUIRES_NEW ensures that this method runs in a new transaction, independent of any existing transactions.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Transaction getTransactionByReference(String reference) {
         return transactionRepository.findByTransactionReference(reference)
