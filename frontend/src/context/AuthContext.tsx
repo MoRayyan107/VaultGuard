@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import type {AuthData} from "../types/auth.ts";
 import {createContext, useState} from "react";
 import * as React from "react";
@@ -31,7 +32,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
             localStorage.setItem("authData", JSON.stringify(data));
             setAuthData(data);
         } catch (error) {
-            throw new Error(`Failed to save auth data to localStorage: ${error}`);
+            throw new Error("Failed to save auth data to localStorage", {cause: error});
         }
     }
 
@@ -41,7 +42,7 @@ export function AuthProvider({children}: {children: React.ReactNode}) {
             localStorage.removeItem("authData");
             setAuthData(null);
         } catch (error) {
-            throw new Error("Failed to remove auth data from localStorage");
+            throw new Error("Failed to remove auth data from localStorage", {cause: error});
         }
     };
 
