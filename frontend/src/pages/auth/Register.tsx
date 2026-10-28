@@ -24,8 +24,23 @@ function Register() {
                 throw new Error("Failed to register user");
             }
             navigate("/login");
-        } catch (error: any) {
-            setError(error.response?.data?.message || "An error occurred. Please try again.");
+        } catch (error: unknown) {
+            if (
+                typeof error === "object" &&
+                error !== null &&
+                "response" in error &&
+                typeof error.response === "object" &&
+                error.response !== null &&
+                "data" in error.response &&
+                typeof error.response.data === "object" &&
+                error.response.data !== null &&
+                "message" in error.response.data &&
+                typeof error.response.data.message === "string"
+            ) {
+                setError(error.response.data.message);
+            } else {
+                setError("An error occurred. Please try again.");
+            }
         } finally {
             setLoading(false);
         }

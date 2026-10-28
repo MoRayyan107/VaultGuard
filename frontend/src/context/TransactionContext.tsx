@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import type {Transaction} from "../types/transaction.ts";
 import {createContext, type ReactNode, useState} from "react";
 import api from "../api/axios.ts";
@@ -46,8 +47,19 @@ function useFetch<T>(endpoint: string) {
             const response = await api.get(endpoint);
             setData(response.data);
             setLastFetchTime(Date.now());
-        } catch (error: any) {
-            if (error.response && error.response.data && error.response.data.message) {
+        } catch (error: unknown) {
+            if (
+                typeof error === "object" &&
+                error !== null &&
+                "response" in error &&
+                typeof error.response === "object" &&
+                error.response !== null &&
+                "data" in error.response &&
+                typeof error.response.data === "object" &&
+                error.response.data !== null &&
+                "message" in error.response.data &&
+                typeof error.response.data.message === "string"
+            ) {
                 setError(error.response.data.message);
             } else {
                 setError("An error occurred. Please try again.");
